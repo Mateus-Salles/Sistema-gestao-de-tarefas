@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { login } from "../services/api"
+import { useNavigate } from "react-router-dom";
 
 function Login() {
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
-    
+    const navigate = useNavigate();
+
 async function entrar(){
-       const dados = await login(email, senha);
-       console.log(dados);
+        navigate("/dashboard");
     }
 
     return (

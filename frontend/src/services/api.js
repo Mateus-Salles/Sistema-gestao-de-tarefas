@@ -1,4 +1,4 @@
-const API_URL = "https://api.forcegrowth.com/v1";
+const API_URL = "http://127.0.0.1:3000";
 
 // função login 
 export async function login(email, senha) {
