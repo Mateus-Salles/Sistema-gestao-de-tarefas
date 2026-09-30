@@ -1,33 +1,139 @@
-import { useState } from "react";
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { login } from "../services/api"
-import { useNavigate } from "react-router-dom";
+import "./Login.css"
 
 function Login() {
-    const [email, setEmail] = useState("");
-    const [senha, setSenha] = useState("");
-    const navigate = useNavigate();
 
-async function entrar(){
-        navigate("/dashboard");
+    const navigate = useNavigate()
+
+    const [email, setEmail] = useState("")
+    const [senha, setSenha] = useState("")
+    const [erro, setErro] = useState("")
+
+    async function entrar() {
+
+        setErro("")
+
+        const usuario = await login(email, senha)
+
+        if (!usuario) {
+            setErro("E-mail ou senha inválidos.")
+            return
+        }
+
+        navigate("/dashboard")
     }
 
     return (
-        <div>
-            <h1>Login</h1>
-            <input type="email"
-            placeholder="E-mail"
-            value={email}
-            onChange={(evento) => setEmail(evento.target.value)}/>
+        <div className="login-page">
 
-            <input type="password"
-            placeholder="Senha"
-            value={senha}
-            onChange={(evento) => setSenha(evento.target.value)} />
+            <section className="login-info">
 
-            <button onClick={entrar}>
-                Entrar
-            </button>
+                <div className="login-brand">
+                    <div className="brand-icon">✓</div>
+                    <span>Gestão de Tarefas</span>
+                </div>
+
+                <div className="login-info-content">
+                    <h1>
+                        Organize sua equipe.
+                        <br />
+                        Gerencie suas tarefas.
+                    </h1>
+
+                    <p>
+                        Centralize as atividades da equipe e acompanhe
+                        o andamento dos projetos em um só lugar.
+                    </p>
+                </div>
+
+                <div className="login-footer">
+                    <span>© 2026 Gestão de Tarefas</span>
+                </div>
+
+            </section>
+
+
+            <section className="login-form-area">
+
+                <div className="login-container">
+
+                    <div className="login-header">
+                        <h2>Bem-vindo de volta</h2>
+
+                        <p>
+                            Entre com suas credenciais para acessar o sistema.
+                        </p>
+                    </div>
+
+
+                    <form className="login-form">
+
+                        <div className="form-group">
+
+                            <label htmlFor="email">
+                                E-mail
+                            </label>
+
+                            <input
+                                type="email"
+                                id="email"
+                                placeholder="seu@email.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+
+                        </div>
+
+
+                        <div className="form-group">
+
+                            <div className="password-label">
+
+                                <label htmlFor="senha">
+                                    Senha
+                                </label>
+
+                                <a href="#">
+                                    Esqueceu a senha?
+                                </a>
+
+                            </div>
+
+                            <input
+                                type="password"
+                                id="senha"
+                                placeholder="Digite sua senha"
+                                value={senha}
+                                onChange={(e) => setSenha(e.target.value)}
+                            />
+
+                        </div>
+
+
+                        {erro && (
+                            <p className="login-error">
+                                {erro}
+                            </p>
+                        )}
+
+
+                        <button
+                            type="button"
+                            onClick={entrar}
+                        >
+                            Entrar
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </section>
+
         </div>
-    );
+    )
 }
-export default Login;
+
+export default Login

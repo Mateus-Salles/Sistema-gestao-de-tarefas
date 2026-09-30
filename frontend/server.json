@@ -1,0 +1,91 @@
+{
+  "usuarios": [
+    {
+      "id": "1",
+      "nome": "Administrador",
+      "email": "admin@email.com",
+      "senha": "123456",
+      "telefone": "(48) 99999-4444"
+    },
+    {
+      "id": "2",
+      "nome": "João Silva",
+      "email": "joao@email.com",
+      "senha": "123456",
+      "telefone": "(48) 99999-1111"
+    },
+    {
+      "id": "3",
+      "nome": "Maria Santos",
+      "email": "maria@email.com",
+      "senha": "123456",
+      "telefone": "(48) 99999-2222"
+    }
+  ],
+  "tarefas": [
+    {
+      "id": "1",
+      "titulo": "Atualizar campanha",
+      "descricao": "Atualizar os materiais da campanha de marketing.",
+      "responsavel": "João Silva",
+      "status": "A FAZER"
+    },
+    {
+      "id": "2",
+      "titulo": "Criar arte para Instagram",
+      "descricao": "Desenvolver nova arte para publicação.",
+      "responsavel": "Maria Santos",
+      "status": "A FAZER"
+    },
+    {
+      "id": "3",
+      "titulo": "Revisar material",
+      "descricao": "Revisar material publicitário.",
+      "responsavel": "Maria Santos",
+      "status": "EM ANDAMENTO"
+    },
+    {
+      "id": "4",
+      "titulo": "Planejar campanha",
+      "descricao": "Definir as próximas ações da campanha.",
+      "responsavel": "João Silva",
+      "status": "EM ANDAMENTO"
+    },
+    {
+      "id": "5",
+      "titulo": "Aprovar publicação",
+      "descricao": "Verificar conteúdo antes da publicação.",
+      "responsavel": "Carlos Oliveira",
+      "status": "EM REVISÃO"
+    },
+    {
+      "id": "6",
+      "titulo": "Revisar vídeo",
+      "descricao": "Avaliar o vídeo da campanha.",
+      "responsavel": "Carlos Oliveira",
+      "status": "EM REVISÃO"
+    },
+    {
+      "id": "7",
+      "titulo": "Publicar conteúdo",
+      "descricao": "Publicar conteúdo nas redes sociais.",
+      "responsavel": "João Silva",
+      "status": "CONCLUÍDO"
+    },
+    {
+      "id": "8",
+      "titulo": "Enviar relatório",
+      "descricao": "Enviar relatório final da campanha.",
+      "responsavel": "Maria Santos",
+      "status": "CONCLUÍDO"
+    },
+    {
+      "titulo": "ORGANIZAR MATERIAL",
+      "descricao": "Monitorar a organização do processo de lançamento.",
+      "responsavel": "João Silva",
+      "status": "A FAZER",
+      "id": "NKvCAlR4z8w"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}
