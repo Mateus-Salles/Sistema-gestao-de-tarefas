@@ -25,66 +25,129 @@
   "tarefas": [
     {
       "id": "1",
-      "titulo": "Atualizar campanha",
-      "descricao": "Atualizar os materiais da campanha de marketing.",
-      "responsavel": "João Silva",
-      "status": "A FAZER"
+      "titulo": "Definir oferta e bônus",
+      "descricao": "Definir oferta principal do projeto.",
+      "responsavel": "Yuri",
+      "status": "EM ANDAMENTO",
+      "divisao": "Produto",
+      "prazo": "2026-09-30"
     },
     {
       "id": "2",
-      "titulo": "Criar arte para Instagram",
-      "descricao": "Desenvolver nova arte para publicação.",
-      "responsavel": "Maria Santos",
-      "status": "A FAZER"
+      "titulo": "Roteiro das 3 aulas",
+      "descricao": "Criar roteiro das aulas.",
+      "responsavel": "Mateus",
+      "status": "A FAZER",
+      "divisao": "Conteúdo",
+      "prazo": "2026-09-08"
     },
     {
       "id": "3",
-      "titulo": "Revisar material",
-      "descricao": "Revisar material publicitário.",
-      "responsavel": "Maria Santos",
-      "status": "EM ANDAMENTO"
+      "titulo": "Criar públicos no gerenciador",
+      "descricao": "Configurar públicos da campanha.",
+      "responsavel": "Gabriel",
+      "status": "A FAZER",
+      "divisao": "Tráfego",
+      "prazo": "2026-09-14"
     },
     {
       "id": "4",
-      "titulo": "Planejar campanha",
-      "descricao": "Definir as próximas ações da campanha.",
-      "responsavel": "João Silva",
-      "status": "EM ANDAMENTO"
+      "titulo": "Escrever sequência de aquecimento",
+      "descricao": "Criar sequência de mensagens.",
+      "responsavel": "Mateus",
+      "status": "EM ANDAMENTO",
+      "divisao": "Disparos",
+      "prazo": "2026-09-13"
     },
     {
       "id": "5",
-      "titulo": "Aprovar publicação",
-      "descricao": "Verificar conteúdo antes da publicação.",
-      "responsavel": "Carlos Oliveira",
-      "status": "EM REVISÃO"
+      "titulo": "Editar aulas",
+      "descricao": "Editar as aulas do projeto.",
+      "responsavel": "Yuri",
+      "status": "EM REVISÃO",
+      "divisao": "Conteúdo",
+      "prazo": "2026-09-16"
     },
     {
       "id": "6",
-      "titulo": "Revisar vídeo",
-      "descricao": "Avaliar o vídeo da campanha.",
-      "responsavel": "Carlos Oliveira",
-      "status": "EM REVISÃO"
+      "titulo": "Validar promessa com o cliente",
+      "descricao": "Validar material com o cliente.",
+      "responsavel": "Henrique",
+      "status": "EM REVISÃO",
+      "divisao": "Produto",
+      "prazo": "2026-09-02"
     },
     {
       "id": "7",
-      "titulo": "Publicar conteúdo",
-      "descricao": "Publicar conteúdo nas redes sociais.",
-      "responsavel": "João Silva",
-      "status": "CONCLUÍDO"
+      "titulo": "Instalar pixel na página",
+      "descricao": "Configurar pixel da campanha.",
+      "responsavel": "Gabriel",
+      "status": "CONCLUÍDO",
+      "divisao": "Tráfego",
+      "prazo": "2026-09-04"
+    }
+  ],
+  "projetos": [
+    {
+      "id": "1",
+      "nome": "Lançamento Verão",
+      "cliente": "Nutri Maternal",
+      "tipo": "Semente",
+      "prazo": "30/09",
+      "progresso": "12/20",
+      "status": "Ativo"
     },
     {
-      "id": "8",
-      "titulo": "Enviar relatório",
-      "descricao": "Enviar relatório final da campanha.",
-      "responsavel": "Maria Santos",
-      "status": "CONCLUÍDO"
+      "id": "2",
+      "nome": "Turma 4",
+      "cliente": "Era Profética",
+      "tipo": "Perpétuo",
+      "prazo": "15/10",
+      "progresso": "5/18",
+      "status": "Ativo"
     },
     {
-      "titulo": "ORGANIZAR MATERIAL",
-      "descricao": "Monitorar a organização do processo de lançamento.",
-      "responsavel": "João Silva",
-      "status": "A FAZER",
-      "id": "NKvCAlR4z8w"
+      "id": "3",
+      "nome": "Black Week",
+      "cliente": "Koryx Group",
+      "tipo": "Desafio",
+      "prazo": "20/11",
+      "progresso": "0/22",
+      "status": "Ativo"
+    }
+  ],
+  "clientes": [
+    {
+      "id": "1",
+      "nome": "Nutri Maternal",
+      "email": "contato@maternar.com",
+      "telefone": "(48) 99999-1111",
+      "projetos": 2,
+      "status": "Ativo"
+    },
+    {
+      "id": "2",
+      "nome": "Era Profética",
+      "email": "contato@eraprofetica.com.br",
+      "telefone": "(48) 99999-2222",
+      "projetos": 1,
+      "status": "Ativo"
+    },
+    {
+      "id": "3",
+      "nome": "Koryx Group",
+      "email": "contato@koryxgroup.com.br",
+      "telefone": "(48) 99999-3333",
+      "projetos": 3,
+      "status": "Ativo"
+    },
+    {
+      "id": "4",
+      "nome": "Dr. Marcelo Baggio",
+      "email": "contato@drmarcelobaggio.com",
+      "telefone": "(48) 99999-4444",
+      "projetos": 0,
+      "status": "Inativo"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

@@ -1,227 +1,585 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import {
+    getTarefas,
+    criarTarefa,
+    atualizarTarefa
+} from "../services/api"
 import "./Tasks.css"
-import { getTarefas, criarTarefa } from "../services/api"
 
 function Tasks() {
-  const [tarefas, setTarefas] = useState([])
-  const [mostrarFormulario, setMostrarFormulario] = useState(false)
+    const navigate = useNavigate()
 
-  const [titulo, setTitulo] = useState("")
-  const [descricao, setDescricao] = useState("")
-  const [responsavel, setResponsavel] = useState("")
-  const [status, setStatus] = useState("A FAZER")
+    const [tarefas, setTarefas] = useState([])
+    const [mostrarFormulario, setMostrarFormulario] = useState(false)
 
-  useEffect(() => {
+    const [titulo, setTitulo] = useState("")
+    const [descricao, setDescricao] = useState("")
+    const [responsavel, setResponsavel] = useState("")
+    const [divisao, setDivisao] = useState("Produto")
+    const [prazo, setPrazo] = useState("")
+    const [status, setStatus] = useState("A FAZER")
+
+    const [filtroResponsavel, setFiltroResponsavel] = useState("Todos")
+    const [somenteAtrasadas, setSomenteAtrasadas] = useState(false)
+
+    const [tarefaArrastada, setTarefaArrastada] = useState(null)
+
+    useEffect(() => {
+        carregarTarefas()
+    }, [])
+
     async function carregarTarefas() {
-      const dados = await getTarefas()
-      setTarefas(dados)
+        const dados = await getTarefas()
+        setTarefas(dados)
     }
 
-    carregarTarefas()
-  }, [])
+    async function adicionarTarefa() {
+        if (!titulo || !responsavel) {
+            alert("Preencha o título e o responsável.")
+            return
+        }
 
-  async function adicionarTarefa() {
-    if (!titulo || !responsavel) {
-      alert("Preencha o título e o responsável.")
-      return
+        const novaTarefa = {
+            titulo,
+            descricao,
+            responsavel,
+            divisao,
+            prazo,
+            status
+        }
+
+        const tarefaCriada = await criarTarefa(novaTarefa)
+
+        setTarefas(prev => [...prev, tarefaCriada])
+
+        setTitulo("")
+        setDescricao("")
+        setResponsavel("")
+        setDivisao("Produto")
+        setPrazo("")
+        setStatus("A FAZER")
+
+        setMostrarFormulario(false)
     }
 
-    const novaTarefa = {
-      titulo,
-      descricao,
-      responsavel,
-      status
+    function iniciarArraste(event, tarefa) {
+        setTarefaArrastada(tarefa)
+
+        event.dataTransfer.effectAllowed = "move"
+        event.dataTransfer.setData(
+            "text/plain",
+            String(tarefa.id)
+        )
     }
 
-    const tarefaCriada = await criarTarefa(novaTarefa)
+    function permitirSoltar(event) {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = "move"
+    }
 
-    setTarefas([...tarefas, tarefaCriada])
+    async function soltarTarefa(event, novoStatus) {
+        event.preventDefault()
 
-    setTitulo("")
-    setDescricao("")
-    setResponsavel("")
-    setStatus("A FAZER")
+        let id = event.dataTransfer.getData("text/plain")
 
-    setMostrarFormulario(false)
-  }
+        if (!id && tarefaArrastada) {
+            id = String(tarefaArrastada.id)
+        }
 
-  const aFazer = tarefas.filter(
-    tarefa => tarefa.status === "A FAZER"
-  )
+        const tarefa = tarefas.find(
+            item => String(item.id) === String(id)
+        )
 
-  const andamento = tarefas.filter(
-    tarefa => tarefa.status === "EM ANDAMENTO"
-  )
+        if (!tarefa) {
+            return
+        }
 
-  const revisao = tarefas.filter(
-    tarefa => tarefa.status === "EM REVISÃO"
-  )
+        if (tarefa.status === novoStatus) {
+            setTarefaArrastada(null)
+            return
+        }
 
-  const concluidas = tarefas.filter(
-    tarefa => tarefa.status === "CONCLUÍDO"
-  )
+        const tarefasAnteriores = [...tarefas]
 
-  return (
-    <div className="tasks-page">
+        const tarefasAtualizadas = tarefas.map(item =>
+            String(item.id) === String(tarefa.id)
+                ? {
+                    ...item,
+                    status: novoStatus
+                }
+                : item
+        )
 
-      <header className="tasks-header">
-        <div>
-          <h1>Tarefas</h1>
-          <p>Gerencie as atividades da equipe.</p>
-        </div>
+        setTarefas(tarefasAtualizadas)
+        setTarefaArrastada(null)
 
-        <button
-          className="new-task-button"
-          onClick={() => setMostrarFormulario(true)}
-        >
-          + Nova tarefa
-        </button>
-      </header>
+        try {
+            await atualizarTarefa(
+                tarefa.id,
+                {
+                    ...tarefa,
+                    status: novoStatus
+                }
+            )
+        } catch (erro) {
+            console.error(erro)
 
-      {mostrarFormulario && (
-        <div className="task-form">
+            setTarefas(tarefasAnteriores)
 
-          <h2>Nova tarefa</h2>
+            alert("Não foi possível atualizar a tarefa.")
+        }
+    }
 
-          <input
-            type="text"
-            placeholder="Título da tarefa"
-            value={titulo}
-            onChange={e => setTitulo(e.target.value)}
-          />
+    function finalizarArraste() {
+        setTarefaArrastada(null)
+    }
 
-          <textarea
-            placeholder="Descrição da tarefa"
-            value={descricao}
-            onChange={e => setDescricao(e.target.value)}
-          />
+    function tarefaAtrasada(tarefa) {
+        if (!tarefa.prazo) {
+            return false
+        }
 
-          <input
-            type="text"
-            placeholder="Responsável"
-            value={responsavel}
-            onChange={e => setResponsavel(e.target.value)}
-          />
+        if (tarefa.status === "CONCLUÍDO") {
+            return false
+        }
 
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value)}
-          >
-            <option value="A FAZER">A FAZER</option>
-            <option value="EM ANDAMENTO">EM ANDAMENTO</option>
-            <option value="EM REVISÃO">EM REVISÃO</option>
-            <option value="CONCLUÍDO">CONCLUÍDO</option>
-          </select>
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
 
-          <div>
-            <button onClick={adicionarTarefa}>
-              Salvar tarefa
-            </button>
+        const prazo = new Date(tarefa.prazo)
+        prazo.setHours(0, 0, 0, 0)
 
-            <button
-              onClick={() => setMostrarFormulario(false)}
+        return prazo < hoje
+    }
+
+    const responsaveis = [
+        ...new Set(
+            tarefas
+                .map(tarefa => tarefa.responsavel)
+                .filter(Boolean)
+        )
+    ]
+
+    const tarefasFiltradas = tarefas.filter(tarefa => {
+        const correspondeResponsavel =
+            filtroResponsavel === "Todos" ||
+            tarefa.responsavel === filtroResponsavel
+
+        const correspondeAtrasada =
+            !somenteAtrasadas ||
+            tarefaAtrasada(tarefa)
+
+        return (
+            correspondeResponsavel &&
+            correspondeAtrasada
+        )
+    })
+
+    const aFazer = tarefasFiltradas.filter(
+        tarefa => tarefa.status === "A FAZER"
+    )
+
+    const andamento = tarefasFiltradas.filter(
+        tarefa => tarefa.status === "EM ANDAMENTO"
+    )
+
+    const revisao = tarefasFiltradas.filter(
+        tarefa => tarefa.status === "EM REVISÃO"
+    )
+
+    const concluidas = tarefasFiltradas.filter(
+        tarefa => tarefa.status === "CONCLUÍDO"
+    )
+
+    function renderizarTarefa(tarefa) {
+        return (
+            <div
+                key={tarefa.id}
+                className={
+                    tarefaArrastada &&
+                    String(tarefaArrastada.id) === String(tarefa.id)
+                        ? "kanban-card dragging"
+                        : "kanban-card"
+                }
+                draggable="true"
+                onDragStart={event =>
+                    iniciarArraste(event, tarefa)
+                }
+                onDragEnd={finalizarArraste}
             >
-              Cancelar
-            </button>
-          </div>
+                <span
+                    className={`tag ${tarefa.divisao
+                        ?.toLowerCase()
+                        .replace("ã", "a")
+                        .replace("á", "a")
+                        .replace(" ", "-")}`}
+                >
+                    {tarefa.divisao || "Produto"}
+                </span>
 
-        </div>
-      )}
-
-      <section className="kanban">
-
-        <div className="kanban-column">
-
-          <div className="column-header">
-            <h2>A FAZER</h2>
-            <span>{aFazer.length}</span>
-          </div>
-
-          <div className="task-cards">
-            {aFazer.map(tarefa => (
-              <div className="task-card" key={tarefa.id}>
                 <h3>{tarefa.titulo}</h3>
-                <p>{tarefa.descricao}</p>
 
-                <div className="task-card-footer">
-                  <span>{tarefa.responsavel}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                <p>{tarefa.responsavel}</p>
+
+                {tarefa.prazo && (
+                    <span
+                        className={
+                            tarefaAtrasada(tarefa)
+                                ? "prazo atrasado"
+                                : "prazo"
+                        }
+                    >
+                        {tarefa.prazo}
+                    </span>
+                )}
+            </div>
+        )
+    }
+
+    return (
+        <div className="kanban-page">
+
+            <aside className="sidebar">
+
+                <h2>GESTOR</h2>
+
+                <nav className="sidebar-menu">
+
+                    <button
+                        className="menu-item"
+                        onClick={() =>
+                            navigate("/dashboard")
+                        }
+                    >
+                        Dashboard
+                    </button>
+
+                    <button
+                        className="menu-item"
+                        onClick={() =>
+                            navigate("/clientes")
+                        }
+                    >
+                        Clientes
+                    </button>
+
+                    <button
+                        className="menu-item"
+                        onClick={() =>
+                            navigate("/projetos")
+                        }
+                    >
+                        Projetos
+                    </button>
+
+                    <button className="menu-item active">
+                        Kanban
+                    </button>
+
+                    <button className="menu-item">
+                        Usuários
+                    </button>
+
+                </nav>
+
+            </aside>
+
+            <main className="kanban-content">
+
+                <header className="kanban-header">
+
+                    <h1>
+                        Kanban · Lançamento Verão — Nutri Maternal
+                    </h1>
+
+                    <div className="kanban-user">
+                        Henrique · Administrador
+                    </div>
+
+                </header>
+
+                <section className="kanban-body">
+
+                    <div className="kanban-top">
+
+                        <div className="kanban-tabs">
+
+                            <button className="tab active">
+                                Kanban do projeto
+                            </button>
+
+                            <button className="tab">
+                                Kanban por colaborador
+                            </button>
+
+                        </div>
+
+                        <button
+                            className="new-task-button"
+                            onClick={() =>
+                                setMostrarFormulario(true)
+                            }
+                        >
+                            + Nova tarefa
+                        </button>
+
+                    </div>
+
+                    <div className="kanban-filters">
+
+                        <select
+                            value={filtroResponsavel}
+                            onChange={event =>
+                                setFiltroResponsavel(
+                                    event.target.value
+                                )
+                            }
+                        >
+                            <option value="Todos">
+                                Responsável: Todos
+                            </option>
+
+                            {responsaveis.map(responsavel => (
+                                <option
+                                    key={responsavel}
+                                    value={responsavel}
+                                >
+                                    {responsavel}
+                                </option>
+                            ))}
+                        </select>
+
+                        <button
+                            className={
+                                somenteAtrasadas
+                                    ? "filter-button selected"
+                                    : "filter-button"
+                            }
+                            onClick={() =>
+                                setSomenteAtrasadas(
+                                    !somenteAtrasadas
+                                )
+                            }
+                        >
+                            Somente atrasadas
+                        </button>
+
+                    </div>
+
+                    {mostrarFormulario && (
+
+                        <div className="task-form">
+
+                            <h2>Nova tarefa</h2>
+
+                            <input
+                                type="text"
+                                placeholder="Título da tarefa"
+                                value={titulo}
+                                onChange={event =>
+                                    setTitulo(event.target.value)
+                                }
+                            />
+
+                            <textarea
+                                placeholder="Descrição"
+                                value={descricao}
+                                onChange={event =>
+                                    setDescricao(event.target.value)
+                                }
+                            />
+
+                            <input
+                                type="text"
+                                placeholder="Responsável"
+                                value={responsavel}
+                                onChange={event =>
+                                    setResponsavel(event.target.value)
+                                }
+                            />
+
+                            <select
+                                value={divisao}
+                                onChange={event =>
+                                    setDivisao(event.target.value)
+                                }
+                            >
+                                <option value="Produto">
+                                    Produto
+                                </option>
+
+                                <option value="Conteúdo">
+                                    Conteúdo
+                                </option>
+
+                                <option value="Tráfego">
+                                    Tráfego
+                                </option>
+
+                                <option value="Disparos">
+                                    Disparos
+                                </option>
+                            </select>
+
+                            <input
+                                type="date"
+                                value={prazo}
+                                onChange={event =>
+                                    setPrazo(event.target.value)
+                                }
+                            />
+
+                            <select
+                                value={status}
+                                onChange={event =>
+                                    setStatus(event.target.value)
+                                }
+                            >
+                                <option value="A FAZER">
+                                    A fazer
+                                </option>
+
+                                <option value="EM ANDAMENTO">
+                                    Em andamento
+                                </option>
+
+                                <option value="EM REVISÃO">
+                                    Em revisão
+                                </option>
+
+                                <option value="CONCLUÍDO">
+                                    Concluído
+                                </option>
+                            </select>
+
+                            <div className="form-buttons">
+
+                                <button
+                                    onClick={adicionarTarefa}
+                                >
+                                    Salvar
+                                </button>
+
+                                <button
+                                    onClick={() =>
+                                        setMostrarFormulario(false)
+                                    }
+                                >
+                                    Cancelar
+                                </button>
+
+                            </div>
+
+                        </div>
+                    )}
+
+                    <div className="kanban-board">
+
+                        <div
+                            className="kanban-column"
+                            onDragOver={permitirSoltar}
+                            onDrop={event =>
+                                soltarTarefa(
+                                    event,
+                                    "A FAZER"
+                                )
+                            }
+                        >
+                            <div className="column-header">
+                                <h2>A fazer</h2>
+                                <span>{aFazer.length}</span>
+                            </div>
+
+                            <div className="kanban-cards">
+                                {aFazer.map(renderizarTarefa)}
+                            </div>
+
+                            <div className="add-task">
+                                + Adicionar tarefa
+                            </div>
+                        </div>
+
+                        <div
+                            className="kanban-column"
+                            onDragOver={permitirSoltar}
+                            onDrop={event =>
+                                soltarTarefa(
+                                    event,
+                                    "EM ANDAMENTO"
+                                )
+                            }
+                        >
+                            <div className="column-header">
+                                <h2>Em andamento</h2>
+                                <span>{andamento.length}</span>
+                            </div>
+
+                            <div className="kanban-cards">
+                                {andamento.map(renderizarTarefa)}
+                            </div>
+
+                            <div className="add-task">
+                                + Adicionar tarefa
+                            </div>
+                        </div>
+
+                        <div
+                            className="kanban-column"
+                            onDragOver={permitirSoltar}
+                            onDrop={event =>
+                                soltarTarefa(
+                                    event,
+                                    "EM REVISÃO"
+                                )
+                            }
+                        >
+                            <div className="column-header">
+                                <h2>Em revisão</h2>
+                                <span>{revisao.length}</span>
+                            </div>
+
+                            <div className="kanban-cards">
+                                {revisao.map(renderizarTarefa)}
+                            </div>
+
+                            <div className="add-task">
+                                + Adicionar tarefa
+                            </div>
+                        </div>
+
+                        <div
+                            className="kanban-column"
+                            onDragOver={permitirSoltar}
+                            onDrop={event =>
+                                soltarTarefa(
+                                    event,
+                                    "CONCLUÍDO"
+                                )
+                            }
+                        >
+                            <div className="column-header">
+                                <h2>Concluído</h2>
+                                <span>{concluidas.length}</span>
+                            </div>
+
+                            <div className="kanban-cards">
+                                {concluidas.map(renderizarTarefa)}
+                            </div>
+
+                            <div className="add-task">
+                                + Adicionar tarefa
+                            </div>
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </main>
 
         </div>
-
-        <div className="kanban-column">
-
-          <div className="column-header">
-            <h2>EM ANDAMENTO</h2>
-            <span>{andamento.length}</span>
-          </div>
-
-          <div className="task-cards">
-            {andamento.map(tarefa => (
-              <div className="task-card" key={tarefa.id}>
-                <h3>{tarefa.titulo}</h3>
-                <p>{tarefa.descricao}</p>
-
-                <div className="task-card-footer">
-                  <span>{tarefa.responsavel}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-
-        <div className="kanban-column">
-
-          <div className="column-header">
-            <h2>EM REVISÃO</h2>
-            <span>{revisao.length}</span>
-          </div>
-
-          <div className="task-cards">
-            {revisao.map(tarefa => (
-              <div className="task-card" key={tarefa.id}>
-                <h3>{tarefa.titulo}</h3>
-                <p>{tarefa.descricao}</p>
-
-                <div className="task-card-footer">
-                  <span>{tarefa.responsavel}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-
-        <div className="kanban-column">
-
-          <div className="column-header">
-            <h2>CONCLUÍDO</h2>
-            <span>{concluidas.length}</span>
-          </div>
-
-          <div className="task-cards">
-            {concluidas.map(tarefa => (
-              <div className="task-card" key={tarefa.id}>
-                <h3>{tarefa.titulo}</h3>
-                <p>{tarefa.descricao}</p>
-
-                <div className="task-card-footer">
-                  <span>{tarefa.responsavel}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-  )
+    )
 }
 
 export default Tasks

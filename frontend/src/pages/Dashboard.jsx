@@ -1,106 +1,148 @@
-import "./Dashboard.css"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getTarefas, getProjetos } from "../services/api";
+import "./Dashboard.css";
 
 function Dashboard() {
-    return (
-        <div className="dashboard">
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  const navigate = useNavigate();
 
-            <aside className="sidebar">
-                <h2>Gestão de Tarefas</h2>
+  const [tarefas, setTarefas] = useState([]);
+  const [projetos, setProjetos] = useState([]);
 
-                <nav>
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="#">Tarefas</a>
-                    <a href="#">Funcionários</a>
-                </nav>
-            </aside>
+  useEffect(() => {
+    async function carregarDados() {
+      const tarefas = await getTarefas();
+      const projetos = await getProjetos();
 
-            <main className="main-content">
+      setTarefas(tarefas);
+      setProjetos(projetos);
+    }
 
-                <header className="dashboard-header">
-                    <div>
-                        <h1>Dashboard</h1>
-                        <p>Visão geral das tarefas da equipe.</p>
-                    </div>
+    carregarDados();
+  }, []);
 
-                    <div className="user-info">
-                        <span>Olá, Usuário</span>
-                    </div>
-                </header>
+  function sair() {
+    localStorage.removeItem("usuario");
+    navigate("/");
+  }
 
-                <section className="dashboard-cards">
+  const totalTarefas = tarefas.length;
 
-                    <div className="dashboard-card">
-                        <h3>Total de tarefas</h3>
-                        <strong>24</strong>
-                    </div>
+  const pendentes = tarefas.filter(
+    (tarefa) => tarefa.status === "A FAZER",
+  ).length;
 
-                    <div className="dashboard-card">
-                        <h3>Pendentes</h3>
-                        <strong>8</strong>
-                    </div>
+  const emAndamento = tarefas.filter(
+    (tarefa) => tarefa.status === "EM ANDAMENTO",
+  ).length;
 
-                    <div className="dashboard-card">
-                        <h3>Em andamento</h3>
-                        <strong>10</strong>
-                    </div>
+  const concluidas = tarefas.filter(
+    (tarefa) => tarefa.status === "CONCLUÍDO",
+  ).length;
 
-                    <div className="dashboard-card">
-                        <h3>Concluídas</h3>
-                        <strong>6</strong>
-                    </div>
+  return (
+    <div className="dashboard">
+      <aside className="sidebar">
+        <h2>GESTOR</h2>
 
-                </section>
+        <nav className="sidebar-menu">
+          <button
+            className="menu-item active"
+            onClick={() => navigate("/dashboard")}
+          >
+            Dashboard
+          </button>
 
-                <section className="tasks-section">
+          <button className="menu-item" onClick={() => navigate("/clientes")}>
+            Clientes
+          </button>
 
-                    <div className="section-header">
-                        <h2>Tarefas recentes</h2>
-                        <button>Ver todas</button>
-                    </div>
+          <button className="menu-item" onClick={() => navigate("/projetos")}>
+            Projetos
+          </button>
 
-                    <div className="tasks-list">
+          <button className="menu-item" onClick={() => navigate("/tarefas")}>
+            Kanban
+          </button>
+          
+          <button className="menu-item">Usuários</button>
+        </nav>
 
-                        <div className="task">
-                            <div>
-                                <h3>Atualizar campanha</h3>
-                                <p>Responsável: João</p>
-                            </div>
+        <button className="logout-button" onClick={sair}>
+          Sair
+        </button>
+      </aside>
 
-                            <span className="status pending">
-                                Pendente
-                            </span>
-                        </div>
+      <main className="dashboard-content">
+        <header className="dashboard-header">
+          <h1>Dashboard</h1>
 
-                        <div className="task">
-                            <div>
-                                <h3>Revisar material</h3>
-                                <p>Responsável: Maria</p>
-                            </div>
+          <div className="user-info">
+            <span>{usuario?.nome || "Usuário"}</span>
+            <span>·</span>
+            <span>{usuario?.id === 1 ? "Administrador" : "Funcionário"}</span>
+          </div>
+        </header>
 
-                            <span className="status progress">
-                                Em andamento
-                            </span>
-                        </div>
+        <section className="dashboard-body">
+          <div className="stats">
+            <div className="stat-card">
+              <span>Total de tarefas</span>
+              <strong>{totalTarefas}</strong>
+            </div>
 
-                        <div className="task">
-                            <div>
-                                <h3>Publicar conteúdo</h3>
-                                <p>Responsável: Carlos</p>
-                            </div>
+            <div className="stat-card">
+              <span>Tarefas em andamento</span>
+              <strong>{emAndamento}</strong>
+            </div>
 
-                            <span className="status completed">
-                                Concluída
-                            </span>
-                        </div>
+            <div className="stat-card">
+              <span>Tarefas pendentes</span>
+              <strong>{pendentes}</strong>
+            </div>
 
-                    </div>
+            <div className="stat-card">
+              <span>Tarefas concluídas</span>
+              <strong>{concluidas}</strong>
+            </div>
+          </div>
 
-                </section>
+          <section className="dashboard-section">
+            <h2>Projetos em andamento</h2>
 
-            </main>
+            <div className="project-table">
+              <div className="project-table-header">
+                <span>Projeto</span>
 
-        </div>
-    )
+                <span>Cliente</span>
+
+                <span>Tipo de lançamento</span>
+
+                <span>Prazo</span>
+
+                <span>Progresso</span>
+              </div>
+
+              {projetos.map((projeto) => (
+                <div className="project-table-row" key={projeto.id}>
+                  <span>{projeto.nome}</span>
+
+                  <span>{projeto.cliente}</span>
+
+                  <span>{projeto.tipo}</span>
+
+                  <span>{projeto.prazo}</span>
+
+                  <span>{projeto.progresso}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+  );
 }
 
-export default Dashboard
+export default Dashboard;
