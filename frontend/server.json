@@ -20,6 +20,12 @@
       "email": "maria@email.com",
       "senha": "123456",
       "telefone": "(48) 99999-2222"
+    },
+    {
+      "email": "estagiario@email.com",
+      "senha": "123456",
+      "tipo_usuario": "funcionario",
+      "id": "o73L8VFRS4k"
     }
   ],
   "tarefas": [

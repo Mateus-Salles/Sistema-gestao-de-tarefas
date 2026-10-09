@@ -583,3 +583,5 @@ function Tasks() {
 }
 
 export default Tasks
+
+console.log("TESTE GIT")

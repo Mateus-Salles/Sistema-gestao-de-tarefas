@@ -1,112 +1,101 @@
+
+import axios from "axios";
+
+// Endereço da API de teste
 const API_URL = "http://localhost:3000";
 
+// Instância do Axios usada nas requisições
+export const api = axios.create({
+  baseURL: API_URL,
+});
+
+// LOGIN
 export async function login(email, senha) {
-  const resposta = await fetch(`${API_URL}/usuarios`);
+  const resposta = await api.get("/usuarios");
 
-  const usuarios = await resposta.json();
-
-  const usuario = usuarios.find(
-    (usuario) => usuario.email === email && usuario.senha === senha,
+  const usuario = resposta.data.find(
+    (usuario) =>
+      usuario.email.toLowerCase() === email.trim().toLowerCase() &&
+      usuario.senha === senha
   );
 
   if (!usuario) {
-    return null;
+    throw new Error("E-mail ou senha inválidos.");
   }
 
   return usuario;
 }
 
-export async function getTarefas() {
-  const resposta = await fetch(`${API_URL}/tarefas`);
-  const dados = await resposta.json();
+// CADASTRO DE USUÁRIO
+export async function cadastrarUsuario(email, senha, tipo_usuario) {
+  const resposta = await api.get("/usuarios");
 
-  return dados;
+  // Verifica se o e-mail já está cadastrado
+  const emailExiste = resposta.data.some(
+    (usuario) =>
+      usuario.email.toLowerCase() === email.trim().toLowerCase()
+  );
+
+  if (emailExiste) {
+    throw new Error("Este e-mail já está cadastrado.");
+  }
+
+  // Cria o novo usuário
+  const novoUsuario = {
+    email: email.trim(),
+    senha,
+    tipo_usuario,
+  };
+
+  const cadastro = await api.post("/usuarios", novoUsuario);
+
+  return cadastro.data;
 }
 
-export async function getProjetos() {
-  const resposta = await fetch(`${API_URL}/projetos`);
-
-  const dados = await resposta.json();
-
-  return dados;
+// TAREFAS
+export async function getTarefas() {
+  const resposta = await api.get("/tarefas");
+  return resposta.data;
 }
 
 export async function criarTarefa(tarefa) {
-  const resposta = await fetch(`${API_URL}/tarefas`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(tarefa),
-  });
-
-  return await resposta.json();
+  const resposta = await api.post("/tarefas", tarefa);
+  return resposta.data;
 }
 
 export async function atualizarTarefa(id, tarefa) {
-  const resposta = await fetch(`${API_URL}/tarefas/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(tarefa),
-  });
-
-  return await resposta.json();
+  const resposta = await api.put(`/tarefas/${id}`, tarefa);
+  return resposta.data;
 }
 
-export async function getClientes() {
-  const resposta = await fetch(`${API_URL}/clientes`);
-
-  const dados = await resposta.json();
-
-  return dados;
+// PROJETOS
+export async function getProjetos() {
+  const resposta = await api.get("/projetos");
+  return resposta.data;
 }
 
 export async function criarProjeto(projeto) {
-  const resposta = await fetch(`${API_URL}/projetos`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(projeto),
-  });
-
-  return await resposta.json();
+  const resposta = await api.post("/projetos", projeto);
+  return resposta.data;
 }
 
 export async function atualizarProjeto(id, projeto) {
-  const resposta = await fetch(`${API_URL}/projetos/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(projeto),
-  });
+  const resposta = await api.put(`/projetos/${id}`, projeto);
+  return resposta.data;
+}
 
-  return await resposta.json();
+// CLIENTES
+export async function getClientes() {
+  const resposta = await api.get("/clientes");
+  return resposta.data;
 }
 
 export async function criarCliente(cliente) {
-  const resposta = await fetch(`${API_URL}/clientes`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(cliente),
-  });
-
-  return await resposta.json();
+  const resposta = await api.post("/clientes", cliente);
+  return resposta.data;
 }
 
 export async function atualizarCliente(id, cliente) {
-  const resposta = await fetch(`${API_URL}/clientes/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(cliente),
-  });
-
-  return await resposta.json();
+  const resposta = await api.put(`/clientes/${id}`, cliente);
+  return resposta.data;
 }

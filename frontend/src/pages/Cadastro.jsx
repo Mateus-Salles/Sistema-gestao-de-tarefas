@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login } from "../services/api";
-import "./Login.css";
+import { cadastrarUsuario } from "../services/api";
+import "./Cadastro.css";
 
-function Login() {
+function Cadastro() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [tipoUsuario, setTipoUsuario] = useState("funcionario");
   const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
 
-  async function entrar(e) {
+  async function cadastrar(e) {
     e.preventDefault();
     setErro("");
+    setSucesso("");
 
     try {
-      const usuario = await login(email, senha);
-
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-      navigate("/dashboard");
-    } catch (erro) {
-      setErro(erro.message || "Não foi possível entrar.");
+      await cadastrarUsuario(email, senha, tipoUsuario);
+      setSucesso("Cadastro realizado! Redirecionando para o login...");
+      setTimeout(() => navigate("/"), 1200);
+    } catch (error) {
+      setErro(error.message || "Não foi possível realizar o cadastro.");
     }
   }
 
@@ -34,14 +36,13 @@ function Login() {
 
         <div className="login-info-content">
           <h1>
-            Organize sua equipe.
+            Faça parte da equipe.
             <br />
-            Gerencie suas tarefas.
+            Organize suas tarefas.
           </h1>
-
           <p>
-            Centralize as atividades da equipe e acompanhe o andamento dos
-            projetos em um só lugar.
+            Crie sua conta para acessar o sistema e acompanhar as atividades
+            e os projetos.
           </p>
         </div>
 
@@ -53,11 +54,11 @@ function Login() {
       <section className="login-form-area">
         <div className="login-container">
           <div className="login-header">
-            <h2>Bem-vindo</h2>
-            <p>Entre com suas credenciais para acessar o sistema.</p>
+            <h2>Criar conta</h2>
+            <p>Preencha os dados para se cadastrar.</p>
           </div>
 
-          <form className="login-form" onSubmit={entrar}>
+          <form className="login-form" onSubmit={cadastrar}>
             <div className="form-group">
               <label htmlFor="email">E-mail</label>
               <input
@@ -71,27 +72,37 @@ function Login() {
             </div>
 
             <div className="form-group">
-              <div className="password-label">
-                <label htmlFor="senha">Senha</label>
-                <a href="#">Esqueceu a senha?</a>
-              </div>
-
+              <label htmlFor="senha">Senha</label>
               <input
                 type="password"
                 id="senha"
-                placeholder="Digite sua senha"
+                placeholder="Crie uma senha (mínimo 6 caracteres)"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
+                minLength={6}
                 required
               />
             </div>
 
-            {erro && <p className="login-error">{erro}</p>}
+            <div className="form-group">
+              <label htmlFor="tipoUsuario">Tipo de usuário</label>
+              <select
+                id="tipoUsuario"
+                value={tipoUsuario}
+                onChange={(e) => setTipoUsuario(e.target.value)}
+              >
+                <option value="funcionario">Funcionário</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
 
-            <button type="submit">Entrar</button>
+            {erro && <p className="login-error">{erro}</p>}
+            {sucesso && <p className="cadastro-sucesso">{sucesso}</p>}
+
+            <button type="submit">Cadastrar</button>
 
             <p className="cadastro-link">
-              Não tem uma conta? <Link to="/cadastro">Cadastre-se</Link>
+              Já tem uma conta? <Link to="/">Entrar</Link>
             </p>
           </form>
         </div>
@@ -100,4 +111,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Cadastro;
