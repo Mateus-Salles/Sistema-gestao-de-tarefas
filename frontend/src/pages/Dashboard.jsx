@@ -1,22 +1,30 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTarefas, getProjetos } from "../services/api";
 import "./Dashboard.css";
 
 function Dashboard() {
-  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
   const navigate = useNavigate();
 
   const [tarefas, setTarefas] = useState([]);
   const [projetos, setProjetos] = useState([]);
 
+  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
+  const ehAdministrador = ["administrador", "admin", "dono"].includes(tipoUsuario);
+
   useEffect(() => {
     async function carregarDados() {
-      const tarefas = await getTarefas();
-      const projetos = await getProjetos();
+      try {
+        const dadosTarefas = await getTarefas(usuario);
+        const dadosProjetos = await getProjetos(usuario);
 
-      setTarefas(tarefas);
-      setProjetos(projetos);
+        setTarefas(dadosTarefas);
+        setProjetos(dadosProjetos);
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
+      }
     }
 
     carregarDados();
@@ -28,18 +36,20 @@ function Dashboard() {
   }
 
   const totalTarefas = tarefas.length;
-
-  const pendentes = tarefas.filter(
-    (tarefa) => tarefa.status === "A FAZER",
-  ).length;
-
   const emAndamento = tarefas.filter(
-    (tarefa) => tarefa.status === "EM ANDAMENTO",
+    (tarefa) => tarefa.status === "EM ANDAMENTO"
+  ).length;
+  const pendentes = tarefas.filter(
+    (tarefa) => tarefa.status === "A FAZER"
+  ).length;
+  const concluidas = tarefas.filter(
+    (tarefa) => tarefa.status === "CONCLUÍDO"
   ).length;
 
-  const concluidas = tarefas.filter(
-    (tarefa) => tarefa.status === "CONCLUÍDO",
-  ).length;
+  function progressoProjeto(projeto) {
+    const progresso = Number(projeto.progresso);
+    return Math.max(0, Math.min(100, Number.isFinite(progresso) ? progresso : 0));
+  }
 
   return (
     <div className="dashboard">
@@ -54,19 +64,28 @@ function Dashboard() {
             Dashboard
           </button>
 
-          <button className="menu-item" onClick={() => navigate("/clientes")}>
-            Clientes
-          </button>
+          {ehAdministrador && (
+            <button
+              className="menu-item"
+              onClick={() => navigate("/clientes")}
+            >
+              Clientes
+            </button>
+          )}
 
-          <button className="menu-item" onClick={() => navigate("/projetos")}>
+          <button
+            className="menu-item"
+            onClick={() => navigate("/projetos")}
+          >
             Projetos
           </button>
 
-          <button className="menu-item" onClick={() => navigate("/tarefas")}>
+          <button
+            className="menu-item"
+            onClick={() => navigate("/tarefas")}
+          >
             Kanban
           </button>
-          
-          <button className="menu-item">Usuários</button>
         </nav>
 
         <button className="logout-button" onClick={sair}>
@@ -76,12 +95,15 @@ function Dashboard() {
 
       <main className="dashboard-content">
         <header className="dashboard-header">
-          <h1>Dashboard</h1>
+          <div>
+            <h1>Dashboard</h1>
+            <p>Acompanhe as atividades e os projetos da equipe.</p>
+          </div>
 
           <div className="user-info">
             <span>{usuario?.nome || "Usuário"}</span>
             <span>·</span>
-            <span>{usuario?.id === 1 ? "Administrador" : "Funcionário"}</span>
+            <span>{ehAdministrador ? "Administrador" : "Funcionário"}</span>
           </div>
         </header>
 
@@ -93,50 +115,66 @@ function Dashboard() {
             </div>
 
             <div className="stat-card">
-              <span>Tarefas em andamento</span>
+              <span>Em andamento</span>
               <strong>{emAndamento}</strong>
             </div>
 
             <div className="stat-card">
-              <span>Tarefas pendentes</span>
+              <span>Pendentes</span>
               <strong>{pendentes}</strong>
             </div>
 
             <div className="stat-card">
-              <span>Tarefas concluídas</span>
+              <span>Concluídas</span>
               <strong>{concluidas}</strong>
             </div>
           </div>
 
           <section className="dashboard-section">
-            <h2>Projetos em andamento</h2>
-
-            <div className="project-table">
-              <div className="project-table-header">
-                <span>Projeto</span>
-
-                <span>Cliente</span>
-
-                <span>Tipo de lançamento</span>
-
-                <span>Prazo</span>
-
-                <span>Progresso</span>
+            <div className="section-heading">
+              <div>
+                <h2>Projetos</h2>
+                <p>Acompanhe o progresso dos projetos.</p>
               </div>
 
-              {projetos.map((projeto) => (
-                <div className="project-table-row" key={projeto.id}>
-                  <span>{projeto.nome}</span>
+              <button
+                className="dashboard-action"
+                onClick={() => navigate("/projetos")}
+              >
+                Ver todos
+              </button>
+            </div>
 
-                  <span>{projeto.cliente}</span>
+            <div className="dashboard-projects">
+              {projetos.slice(0, 5).map((projeto) => {
+                const progresso = progressoProjeto(projeto);
 
-                  <span>{projeto.tipo}</span>
+                return (
+                  <div className="dashboard-project" key={projeto.id}>
+                    <div className="project-info">
+                      <strong>{projeto.nome}</strong>
+                      <span>Cliente: {projeto.cliente || "Não informado"}</span>
+                      <span>Prazo: {projeto.prazo || "Não definido"}</span>
+                    </div>
 
-                  <span>{projeto.prazo}</span>
+                    <div className="project-progress">
+                      <span>{progresso}%</span>
+                      <div className="progress-track">
+                        <div
+                          className="progress-fill"
+                          style={{ width: `${progresso}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
 
-                  <span>{projeto.progresso}</span>
-                </div>
-              ))}
+              {projetos.length === 0 && (
+                <p className="dashboard-empty">
+                  Nenhum projeto cadastrado.
+                </p>
+              )}
             </div>
           </section>
         </section>

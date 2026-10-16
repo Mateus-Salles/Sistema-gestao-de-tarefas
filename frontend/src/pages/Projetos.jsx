@@ -1,304 +1,247 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
-    getProjetos,
-    criarProjeto,
-    atualizarProjeto
-} from "../services/api"
-import "./Projetos.css"
+  getProjetos,
+  criarProjeto,
+  atualizarProjeto
+} from "../services/api";
+import "./Projetos.css";
 
 function Projetos() {
-    const [projetos, setProjetos] = useState([])
-    const [busca, setBusca] = useState("")
-    const [statusFiltro, setStatusFiltro] = useState("Todos")
-    const [mostrarFormulario, setMostrarFormulario] = useState(false)
+  const [projetos, setProjetos] = useState([]);
+  const [busca, setBusca] = useState("");
+  const [statusFiltro, setStatusFiltro] = useState("Todos");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
-    const [nome, setNome] = useState("")
-    const [cliente, setCliente] = useState("")
-    const [tipo, setTipo] = useState("")
-    const [prazo, setPrazo] = useState("")
-    const [progresso, setProgresso] = useState("0/0")
+  const [nome, setNome] = useState("");
+  const [cliente, setCliente] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [prazo, setPrazo] = useState("");
+  const [progresso, setProgresso] = useState("0/0");
 
-    useEffect(() => {
-        carregarProjetos()
-    }, [])
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 
-    async function carregarProjetos() {
-        const dados = await getProjetos()
-        setProjetos(dados)
+  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
+  const ehAdministrador = [
+    "administrador",
+    "admin",
+    "dono"
+  ].includes(tipoUsuario);
+
+  async function carregarProjetos() {
+    try {
+      const dados = await getProjetos(usuario);
+      setProjetos(dados);
+    } catch (error) {
+      console.error("Erro ao carregar projetos:", error);
+    }
+  }
+
+  useEffect(() => {
+    carregarProjetos();
+  }, []);
+
+  async function adicionarProjeto() {
+    if (!nome.trim() || !cliente.trim() || !tipo.trim() || !prazo.trim()) {
+      alert("Preencha os campos obrigatórios.");
+      return;
     }
 
-    async function adicionarProjeto() {
-        if (!nome || !cliente || !tipo || !prazo) {
-            alert("Preencha os campos obrigatórios.")
-            return
-        }
+    const novoProjeto = {
+      nome: nome.trim(),
+      cliente: cliente.trim(),
+      tipo: tipo.trim(),
+      prazo: prazo.trim(),
+      progresso,
+      status: "Ativo",
+      responsaveis: []
+    };
 
-        const novoProjeto = {
-            nome,
-            cliente,
-            tipo,
-            prazo,
-            progresso,
-            status: "Ativo"
-        }
+    try {
+      await criarProjeto(novoProjeto);
+      await carregarProjetos();
 
-        const projetoCriado = await criarProjeto(novoProjeto)
-
-        setProjetos([...projetos, projetoCriado])
-
-        setNome("")
-        setCliente("")
-        setTipo("")
-        setPrazo("")
-        setProgresso("0/0")
-
-        setMostrarFormulario(false)
+      setNome("");
+      setCliente("");
+      setTipo("");
+      setPrazo("");
+      setProgresso("0/0");
+      setMostrarFormulario(false);
+    } catch (error) {
+      console.error("Erro ao criar projeto:", error);
+      alert("Não foi possível criar o projeto.");
     }
+  }
 
-    async function alterarStatus(projeto) {
-        const novoStatus =
-            projeto.status === "Ativo"
-                ? "Inativo"
-                : "Ativo"
+  async function alterarStatus(projeto) {
+    const novoStatus = projeto.status === "Ativo" ? "Inativo" : "Ativo";
 
-        const projetoAtualizado = await atualizarProjeto(
-            projeto.id,
-            {
-                ...projeto,
-                status: novoStatus
-            }
-        )
+    try {
+      await atualizarProjeto(projeto.id, {
+        ...projeto,
+        status: novoStatus
+      });
 
-        setProjetos(
-            projetos.map(item =>
-                item.id === projeto.id
-                    ? projetoAtualizado
-                    : item
-            )
-        )
+      await carregarProjetos();
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      alert("Não foi possível atualizar o status.");
     }
+  }
 
-    function editarProjeto(projeto) {
-        const novoNome = prompt(
-            "Nome do projeto:",
-            projeto.nome
-        )
+  async function editarProjeto(projeto) {
+    const novoNome = prompt("Nome do projeto:", projeto.nome);
 
-        if (!novoNome) {
-            return
-        }
+    if (!novoNome?.trim()) return;
 
-        atualizarProjeto(projeto.id, {
-            ...projeto,
-            nome: novoNome
-        }).then(projetoAtualizado => {
-            setProjetos(
-                projetos.map(item =>
-                    item.id === projeto.id
-                        ? projetoAtualizado
-                        : item
-                )
-            )
-        })
+    try {
+      await atualizarProjeto(projeto.id, {
+        ...projeto,
+        nome: novoNome.trim()
+      });
+
+      await carregarProjetos();
+    } catch (error) {
+      console.error("Erro ao editar projeto:", error);
+      alert("Não foi possível editar o projeto.");
     }
+  }
 
-    const projetosFiltrados = projetos.filter(projeto => {
+  const projetosFiltrados = projetos.filter((projeto) => {
+    const correspondeBusca =
+      (projeto.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
+      (projeto.cliente || "").toLowerCase().includes(busca.toLowerCase());
 
-        const correspondeBusca =
-            projeto.nome
-                .toLowerCase()
-                .includes(busca.toLowerCase()) ||
-            projeto.cliente
-                .toLowerCase()
-                .includes(busca.toLowerCase())
+    const correspondeStatus =
+      statusFiltro === "Todos" || projeto.status === statusFiltro;
 
-        const correspondeStatus =
-            statusFiltro === "Todos" ||
-            projeto.status === statusFiltro
+    return correspondeBusca && correspondeStatus;
+  });
 
-        return correspondeBusca && correspondeStatus
-    })
+  return (
+    <div className="projetos-page">
+      <div className="projetos-content">
+        <div className="projetos-filtros">
+          <input
+            type="text"
+            placeholder="Buscar projeto..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
 
-    return (
-        <div className="projetos-page">
+          <select
+            value={statusFiltro}
+            onChange={(e) => setStatusFiltro(e.target.value)}
+          >
+            <option value="Todos">Status: Todos</option>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
 
-            <div className="projetos-content">
+          {ehAdministrador && (
+            <button
+              className="novo-projeto-button"
+              onClick={() => setMostrarFormulario(true)}
+            >
+              + Novo projeto
+            </button>
+          )}
+        </div>
 
-                <div className="projetos-filtros">
+        {ehAdministrador && mostrarFormulario && (
+          <div className="projeto-form">
+            <h2>Novo projeto</h2>
 
-                    <input
-                        type="text"
-                        placeholder="Buscar projeto..."
-                        value={busca}
-                        onChange={e => setBusca(e.target.value)}
-                    />
+            <input
+              type="text"
+              placeholder="Nome do projeto"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
 
-                    <select
-                        value={statusFiltro}
-                        onChange={e => setStatusFiltro(e.target.value)}
-                    >
-                        <option value="Todos">
-                            Status: Todos
-                        </option>
+            <input
+              type="text"
+              placeholder="Cliente"
+              value={cliente}
+              onChange={(e) => setCliente(e.target.value)}
+            />
 
-                        <option value="Ativo">
-                            Ativo
-                        </option>
+            <input
+              type="text"
+              placeholder="Tipo de lançamento"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+            />
 
-                        <option value="Inativo">
-                            Inativo
-                        </option>
-                    </select>
+            <input
+              type="text"
+              placeholder="Prazo"
+              value={prazo}
+              onChange={(e) => setPrazo(e.target.value)}
+            />
 
-                    <button
-                        className="novo-projeto-button"
-                        onClick={() => setMostrarFormulario(true)}
-                    >
-                        + Novo projeto
+            <input
+              type="text"
+              placeholder="Progresso. Ex: 5/20"
+              value={progresso}
+              onChange={(e) => setProgresso(e.target.value)}
+            />
+
+            <div className="projeto-form-buttons">
+              <button onClick={adicionarProjeto}>Salvar</button>
+              <button onClick={() => setMostrarFormulario(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="projetos-table">
+          <div className="projetos-table-header">
+            <span>Projeto</span>
+            <span>Cliente</span>
+            <span>Tipo de lançamento</span>
+            <span>Prazo</span>
+            <span>Progresso</span>
+            <span>Status</span>
+            <span>Ações</span>
+          </div>
+
+          {projetosFiltrados.map((projeto) => (
+            <div className="projetos-table-row" key={projeto.id}>
+              <span>{projeto.nome}</span>
+              <span>{projeto.cliente}</span>
+              <span>{projeto.tipo}</span>
+              <span>{projeto.prazo}</span>
+              <span>{projeto.progresso}</span>
+              <span>{projeto.status}</span>
+
+              <span className="acoes">
+                {ehAdministrador ? (
+                  <>
+                    <button onClick={() => editarProjeto(projeto)}>
+                      Editar
                     </button>
 
-                </div>
+                    <span>·</span>
 
-                {mostrarFormulario && (
-
-                    <div className="projeto-form">
-
-                        <h2>Novo projeto</h2>
-
-                        <input
-                            type="text"
-                            placeholder="Nome do projeto"
-                            value={nome}
-                            onChange={e => setNome(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Cliente"
-                            value={cliente}
-                            onChange={e => setCliente(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Tipo de lançamento"
-                            value={tipo}
-                            onChange={e => setTipo(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Prazo"
-                            value={prazo}
-                            onChange={e => setPrazo(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Progresso. Ex: 5/20"
-                            value={progresso}
-                            onChange={e => setProgresso(e.target.value)}
-                        />
-
-                        <div className="projeto-form-buttons">
-
-                            <button onClick={adicionarProjeto}>
-                                Salvar
-                            </button>
-
-                            <button
-                                onClick={() =>
-                                    setMostrarFormulario(false)
-                                }
-                            >
-                                Cancelar
-                            </button>
-
-                        </div>
-
-                    </div>
-
+                    <button onClick={() => alterarStatus(projeto)}>
+                      {projeto.status === "Ativo" ? "Inativar" : "Ativar"}
+                    </button>
+                  </>
+                ) : (
+                  <span>Sem ações</span>
                 )}
-
-                <div className="projetos-table">
-
-                    <div className="projetos-table-header">
-
-                        <span>Projeto</span>
-                        <span>Cliente</span>
-                        <span>Tipo de lançamento</span>
-                        <span>Prazo</span>
-                        <span>Progresso</span>
-                        <span>Status</span>
-                        <span>Ações</span>
-
-                    </div>
-
-                    {projetosFiltrados.map(projeto => (
-
-                        <div
-                            className="projetos-table-row"
-                            key={projeto.id}
-                        >
-
-                            <span>
-                                {projeto.nome}
-                            </span>
-
-                            <span>
-                                {projeto.cliente}
-                            </span>
-
-                            <span>
-                                {projeto.tipo}
-                            </span>
-
-                            <span>
-                                {projeto.prazo}
-                            </span>
-
-                            <span>
-                                {projeto.progresso}
-                            </span>
-
-                            <span>
-                                {projeto.status}
-                            </span>
-
-                            <span className="acoes">
-
-                                <button
-                                    onClick={() =>
-                                        editarProjeto(projeto)
-                                    }
-                                >
-                                    Editar
-                                </button>
-
-                                <span>·</span>
-
-                                <button
-                                    onClick={() =>
-                                        alterarStatus(projeto)
-                                    }
-                                >
-                                    {projeto.status === "Ativo"
-                                        ? "Inativar"
-                                        : "Ativar"}
-                                </button>
-
-                            </span>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
+              </span>
             </div>
+          ))}
 
+          {projetosFiltrados.length === 0 && (
+            <p>Nenhum projeto encontrado.</p>
+          )}
         </div>
-    )
+      </div>
+    </div>
+  );
 }
 
-export default Projetos
+export default Projetos;

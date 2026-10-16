@@ -5,27 +5,38 @@
       "nome": "Administrador",
       "email": "admin@email.com",
       "senha": "123456",
-      "telefone": "(48) 99999-4444"
+      "telefone": "(48) 99999-4444",
+      "tipo_usuario": "administrador"
     },
     {
       "id": "2",
       "nome": "João Silva",
       "email": "joao@email.com",
       "senha": "123456",
-      "telefone": "(48) 99999-1111"
+      "telefone": "(48) 99999-1111",
+      "tipo_usuario": "funcionario"
     },
     {
       "id": "3",
       "nome": "Maria Santos",
       "email": "maria@email.com",
       "senha": "123456",
-      "telefone": "(48) 99999-2222"
+      "telefone": "(48) 99999-2222",
+      "tipo_usuario": "funcionario"
     },
     {
       "email": "estagiario@email.com",
       "senha": "123456",
       "tipo_usuario": "funcionario",
-      "id": "o73L8VFRS4k"
+      "id": "o73L8VFRS4k",
+      "nome": "Estagiário"
+    },
+    {
+      "email": "elian@email.com",
+      "senha": "123456",
+      "tipo_usuario": "funcionario",
+      "id": "loYBGUUJYNA",
+      "nome": "Elian"
     }
   ],
   "tarefas": [
@@ -43,7 +54,7 @@
       "titulo": "Roteiro das 3 aulas",
       "descricao": "Criar roteiro das aulas.",
       "responsavel": "Mateus",
-      "status": "A FAZER",
+      "status": "CONCLUÍDO",
       "divisao": "Conteúdo",
       "prazo": "2026-09-08"
     },
@@ -88,9 +99,18 @@
       "titulo": "Instalar pixel na página",
       "descricao": "Configurar pixel da campanha.",
       "responsavel": "Gabriel",
-      "status": "CONCLUÍDO",
+      "status": "A FAZER",
       "divisao": "Tráfego",
       "prazo": "2026-09-04"
+    },
+    {
+      "titulo": "Código",
+      "descricao": "Verificar estrutura do código",
+      "responsavel": "Elian",
+      "divisao": "Produto",
+      "prazo": "",
+      "status": "A FAZER",
+      "id": "WOz06mxhU2A"
     }
   ],
   "projetos": [
@@ -101,7 +121,11 @@
       "tipo": "Semente",
       "prazo": "30/09",
       "progresso": "12/20",
-      "status": "Ativo"
+      "status": "Ativo",
+      "responsaveis": [
+        "Gabriel",
+        "Mateus"
+      ]
     },
     {
       "id": "2",
@@ -110,7 +134,11 @@
       "tipo": "Perpétuo",
       "prazo": "15/10",
       "progresso": "5/18",
-      "status": "Ativo"
+      "status": "Ativo",
+      "responsaveis": [
+        "Yuri",
+        "Henrique"
+      ]
     },
     {
       "id": "3",
@@ -119,7 +147,11 @@
       "tipo": "Desafio",
       "prazo": "20/11",
       "progresso": "0/22",
-      "status": "Ativo"
+      "status": "Ativo",
+      "responsaveis": [
+        "Gabriel",
+        "Yuri"
+      ]
     }
   ],
   "clientes": [

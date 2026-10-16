@@ -6,6 +6,7 @@ import "./Cadastro.css";
 function Cadastro() {
   const navigate = useNavigate();
 
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("funcionario");
@@ -18,11 +19,16 @@ function Cadastro() {
     setSucesso("");
 
     try {
-      await cadastrarUsuario(email, senha, tipoUsuario);
+      await cadastrarUsuario(nome, email, senha, tipoUsuario);
+
       setSucesso("Cadastro realizado! Redirecionando para o login...");
       setTimeout(() => navigate("/"), 1200);
     } catch (error) {
-      setErro(error.message || "Não foi possível realizar o cadastro.");
+      setErro(
+        error.response?.data?.message ||
+        error.message ||
+        "Não foi possível realizar o cadastro."
+      );
     }
   }
 
@@ -40,6 +46,7 @@ function Cadastro() {
             <br />
             Organize suas tarefas.
           </h1>
+
           <p>
             Crie sua conta para acessar o sistema e acompanhar as atividades
             e os projetos.
@@ -59,6 +66,18 @@ function Cadastro() {
           </div>
 
           <form className="login-form" onSubmit={cadastrar}>
+            <div className="form-group">
+              <label htmlFor="nome">Nome completo</label>
+              <input
+                type="text"
+                id="nome"
+                placeholder="Seu nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </div>
+
             <div className="form-group">
               <label htmlFor="email">E-mail</label>
               <input
@@ -97,7 +116,10 @@ function Cadastro() {
             </div>
 
             {erro && <p className="login-error">{erro}</p>}
-            {sucesso && <p className="cadastro-sucesso">{sucesso}</p>}
+
+            {sucesso && (
+              <p className="cadastro-sucesso">{sucesso}</p>
+            )}
 
             <button type="submit">Cadastrar</button>
 
