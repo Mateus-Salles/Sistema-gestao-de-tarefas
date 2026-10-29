@@ -1,10 +1,9 @@
 import express from "express";
+import routes from "./routes/routes.js";
 
 const app = express();
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.json({ message: "API Running!" });
-})
+app.use("/api", routes);
 
 export default app;

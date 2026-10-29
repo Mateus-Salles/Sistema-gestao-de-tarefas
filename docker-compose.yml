@@ -20,6 +20,7 @@ services:
 
   app:
     build: ./backend
+    command: npm run dev
     restart: unless-stopped
     depends_on:
       db:
@@ -28,6 +29,9 @@ services:
       - .env
     environment:
       DB_HOST: db
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
 

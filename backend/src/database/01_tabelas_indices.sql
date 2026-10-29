@@ -65,6 +65,11 @@ CREATE TABLE tarefa (
     atualizado_em TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE token_revogado (
+    jti UUID PRIMARY KEY,
+    expira_em TIMESTAMPTZ NOT NULL
+);
+
 -- Chaves estrangeiras
 ALTER TABLE projeto
     ADD CONSTRAINT fk_projeto_cliente FOREIGN KEY (cliente_id)
