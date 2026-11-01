@@ -1,14 +1,39 @@
-import dotenv from "dotenv";
-import path from "path";
-import app from "./app.js";
+import { app } from './app';
+import database from './database';
+import { getJwtConfig } from './configs/jwt.config';
 
-import { fileURLToPath } from "url";
+const PORT = Number(process.env.APP_PORT) || 3000;
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+async function verifyDatabase() {
+  const client = await database.getClient();
 
-const PORT = process.env.port || 3000;
+  try {
+    await client.query('SELECT 1');
+  } finally {
+    client.release();
+  }
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-})
+async function start() {
+  try {
+    getJwtConfig();
+    
+    await verifyDatabase();
+  } catch (err) {
+    console.error('[server] falha ao iniciar:', err.message);
+    process.exit(1);
+  }
+
+  const server = app.listen(PORT, () => { console.log(`[server] rodando na porta ${PORT}`) });
+
+  const stop = (sinal) => {
+    console.log(`[server] ${sinal} recebido, encerrando...`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
+}
+
+start();

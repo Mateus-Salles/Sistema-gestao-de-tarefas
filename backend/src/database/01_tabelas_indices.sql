@@ -1,4 +1,9 @@
 -- ============================================================
+-- SISTEMA DE GESTÃO DE TAREFAS — FORGE GROWTH
+-- Script Completo para PostgreSQL - Parte 1: Tabelas e Índices
+-- ============================================================
+
+-- ============================================================
 -- 1. TABELAS
 -- ============================================================
 
@@ -60,6 +65,12 @@ CREATE TABLE tarefa (
     atualizado_em TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE token_revogado (
+    jti UUID PRIMARY KEY,
+    expira_em TIMESTAMPTZ NOT NULL
+);
+
+-- Chaves estrangeiras
 ALTER TABLE projeto
     ADD CONSTRAINT fk_projeto_cliente FOREIGN KEY (cliente_id)
     REFERENCES cliente (id_cliente);
@@ -138,6 +149,7 @@ ALTER TABLE tarefa
 -- 3. ÍNDICES
 -- ============================================================
 
+-- Índices de FK (o Postgres não cria automaticamente)
 CREATE INDEX idx_projeto_cliente_id ON projeto (cliente_id);
 CREATE INDEX idx_projeto_modelo_lancamento_id ON projeto (modelo_lancamento_id);
 CREATE INDEX idx_tarefapadrao_modelo_lancamento_id ON tarefa_padrao (modelo_lancamento_id);

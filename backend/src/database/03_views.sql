@@ -1,4 +1,9 @@
 -- ============================================================
+-- SISTEMA DE GESTÃO DE TAREFAS — FORGE GROWTH
+-- Script Completo para PostgreSQL - Parte 3: Views
+-- ============================================================
+
+-- ============================================================
 -- 6. VIEWS
 -- ============================================================
 
@@ -93,3 +98,5 @@ SELECT
 FROM projeto p
 LEFT JOIN tarefa t ON t.projeto_id = p.id_projeto
 GROUP BY p.id_projeto, p.nome, p.status;
+
+

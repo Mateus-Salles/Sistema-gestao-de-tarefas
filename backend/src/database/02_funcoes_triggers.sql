@@ -1,4 +1,9 @@
 -- ============================================================
+-- SISTEMA DE GESTÃO DE TAREFAS — FORGE GROWTH
+-- Script Completo para PostgreSQL - Parte 2: Functions e Triggers
+-- ============================================================
+
+-- ============================================================
 -- 4. FUNÇÃO AUXILIAR DE AUTORIZAÇÃO
 -- ============================================================
 -- As triggers de autorização abaixo dependem de a aplicação
@@ -206,7 +211,6 @@ CREATE TRIGGER trg_valida_conclusao_projeto
 BEFORE UPDATE OF status ON projeto
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_conclusao_projeto();
-
 
 -- ============================================================
 -- 7. FUNÇÃO DE TABELA: KANBAN INDIVIDUAL
