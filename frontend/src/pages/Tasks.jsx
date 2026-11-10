@@ -5,20 +5,14 @@ import {
   criarTarefa,
   atualizarTarefa
 } from "../services/api";
+import { getUsuarioLogado, ehAdministrador as verificarAdmin, nomeDoNivel } from "../utils/perfil";
 import "./Tasks.css";
 
 function Tasks() {
   const navigate = useNavigate();
 
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-
-  const ehAdministrador = [
-    "administrador",
-    "admin",
-    "dono"
-  ].includes(tipoUsuario);
+  const usuario = getUsuarioLogado();
+  const ehAdministrador = verificarAdmin(usuario);
 
   const [tarefas, setTarefas] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -299,7 +293,7 @@ function Tasks() {
 
           <div className="kanban-user">
             {usuario?.nome || "Usuário"} ·{" "}
-            {ehAdministrador ? "Administrador" : "Funcionário"}
+            {nomeDoNivel(usuario)}
           </div>
         </header>
 

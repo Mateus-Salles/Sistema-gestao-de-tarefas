@@ -2,17 +2,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTarefas, getProjetos } from "../services/api";
+import { getUsuarioLogado, ehAdministrador as verificarAdmin, nomeDoNivel } from "../utils/perfil";
 import "./Dashboard.css";
 
 function Dashboard() {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+  const usuario = getUsuarioLogado();
   const navigate = useNavigate();
 
   const [tarefas, setTarefas] = useState([]);
   const [projetos, setProjetos] = useState([]);
 
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-  const ehAdministrador = ["administrador", "admin", "dono"].includes(tipoUsuario);
+  const ehAdministrador = verificarAdmin(usuario);
 
   useEffect(() => {
     async function carregarDados() {
@@ -103,7 +103,7 @@ function Dashboard() {
           <div className="user-info">
             <span>{usuario?.nome || "Usuário"}</span>
             <span>·</span>
-            <span>{ehAdministrador ? "Administrador" : "Funcionário"}</span>
+            <span>{nomeDoNivel(usuario)}</span>
           </div>
         </header>
 

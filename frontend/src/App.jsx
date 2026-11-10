@@ -6,17 +6,10 @@ import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Clientes from "./pages/Clientes";
 import Projetos from "./pages/Projetos";
+import { getUsuarioLogado, ehAdministrador as verificarAdmin } from "./utils/perfil";
 
 function App() {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-
-  const ehAdministrador = [
-    "administrador",
-    "admin",
-    "dono"
-  ].includes(tipoUsuario);
+  const ehAdministrador = verificarAdmin(getUsuarioLogado());
 
   return (
     <BrowserRouter>

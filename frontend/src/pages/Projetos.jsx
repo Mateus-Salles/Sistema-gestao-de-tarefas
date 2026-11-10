@@ -4,6 +4,7 @@ import {
   criarProjeto,
   atualizarProjeto
 } from "../services/api";
+import { getUsuarioLogado, ehAdministrador as verificarAdmin } from "../utils/perfil";
 import "./Projetos.css";
 
 function Projetos() {
@@ -18,14 +19,8 @@ function Projetos() {
   const [prazo, setPrazo] = useState("");
   const [progresso, setProgresso] = useState("0/0");
 
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-  const ehAdministrador = [
-    "administrador",
-    "admin",
-    "dono"
-  ].includes(tipoUsuario);
+  const usuario = getUsuarioLogado();
+  const ehAdministrador = verificarAdmin(usuario);
 
   async function carregarProjetos() {
     try {

@@ -1,17 +1,11 @@
 import axios from "axios";
+import { ehAdministrador, NIVEL_COLABORADOR } from "../utils/perfil";
 
 const API_URL = "http://localhost:3000";
 
 export const api = axios.create({
   baseURL: API_URL,
 });
-
-// Verifica se o usuário é administrador
-function ehAdministrador(usuario) {
-  const tipo = usuario?.tipo_usuario?.trim().toLowerCase();
-
-  return ["administrador", "admin", "dono"].includes(tipo);
-}
 
 // LOGIN
 export async function login(email, senha) {
@@ -31,7 +25,9 @@ export async function login(email, senha) {
 }
 
 // CADASTRO DE USUÁRIO
-export async function cadastrarUsuario(nome, email, senha, tipo_usuario) {
+// Todo cadastro público entra como colaborador.
+// Só um administrador pode promover alguém (tela de gestão de usuários).
+export async function cadastrarUsuario(nome, email, senha) {
   const resposta = await api.get("/usuarios");
 
   const emailExiste = resposta.data.some(
@@ -47,7 +43,7 @@ export async function cadastrarUsuario(nome, email, senha, tipo_usuario) {
     nome: nome.trim(),
     email: email.trim(),
     senha,
-    tipo_usuario,
+    nivel_acesso: NIVEL_COLABORADOR,
   };
 
   const cadastro = await api.post("/usuarios", novoUsuario);
