@@ -1,13 +1,55 @@
 import axios from "axios";
 import { ehAdministrador, NIVEL_COLABORADOR } from "../utils/perfil";
+import { getToken, limparSessao } from "./sessao";
 
-const API_URL = "http://localhost:3000";
+// Endereço da API. Configure em frontend/.env (veja .env.example).
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export const api = axios.create({
   baseURL: API_URL,
 });
 
+// Envia o token JWT em todas as requisições, quando houver.
+api.interceptors.request.use((config) => {
+  const token = getToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// Token ausente, expirado ou revogado: encerra a sessão e volta para o login.
+// O login em si também responde 401 (senha errada), então ele fica de fora.
+api.interceptors.response.use(
+  (resposta) => resposta,
+  (erro) => {
+    const ehLogin = erro.config?.url?.includes("/auth/login");
+
+    if (erro.response?.status === 401 && !ehLogin) {
+      limparSessao();
+      window.location.assign("/");
+    }
+
+    return Promise.reject(erro);
+  }
+);
+
+// Mensagem amigável a partir de um erro da API (AppError/Zod) ou da rede.
+export function mensagemDeErro(erro, padrao = "Algo deu errado. Tente novamente.") {
+  return (
+    erro?.response?.data?.message ||
+    erro?.response?.data?.error ||
+    (erro?.request && !erro?.response ? "Não foi possível conectar ao servidor." : null) ||
+    erro?.message ||
+    padrao
+  );
+}
+
 // LOGIN
+// Retorna { usuario, token } no mesmo formato da rota POST /v1/auth/login.
+// Enquanto o front usa o JSON Server, o usuário é conferido aqui e não há token.
 export async function login(email, senha) {
   const resposta = await api.get("/usuarios");
 
@@ -21,7 +63,22 @@ export async function login(email, senha) {
     throw new Error("E-mail ou senha inválidos.");
   }
 
-  return usuario;
+  return { usuario, token: null };
+}
+
+// LOGOUT
+// Com token, avisa a API para revogá-lo (POST /v1/auth/logout).
+// Mesmo se a API falhar, a sessão local é encerrada.
+export async function logout() {
+  try {
+    if (getToken()) {
+      await api.post("/v1/auth/logout");
+    }
+  } catch {
+    // Ignora: o usuário sai de qualquer forma.
+  } finally {
+    limparSessao();
+  }
 }
 
 // CADASTRO DE USUÁRIO

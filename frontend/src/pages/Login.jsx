@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login } from "../services/api";
+import { login, mensagemDeErro } from "../services/api";
+import { salvarSessao } from "../services/sessao";
 import "./Login.css";
 
 function Login() {
@@ -15,12 +16,12 @@ function Login() {
     setErro("");
 
     try {
-      const usuario = await login(email, senha);
+      const sessao = await login(email, senha);
 
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-      navigate("/dashboard");
+      salvarSessao(sessao);
+      navigate("/dashboard", { replace: true });
     } catch (erro) {
-      setErro(erro.message || "Não foi possível entrar.");
+      setErro(mensagemDeErro(erro, "Não foi possível entrar."));
     }
   }
 

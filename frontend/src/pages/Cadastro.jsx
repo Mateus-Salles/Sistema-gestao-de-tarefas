@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { cadastrarUsuario } from "../services/api";
+import { cadastrarUsuario, mensagemDeErro } from "../services/api";
 import "./Cadastro.css";
 
 function Cadastro() {
@@ -23,11 +23,7 @@ function Cadastro() {
       setSucesso("Cadastro realizado! Redirecionando para o login...");
       setTimeout(() => navigate("/"), 1200);
     } catch (error) {
-      setErro(
-        error.response?.data?.message ||
-        error.message ||
-        "Não foi possível realizar o cadastro."
-      );
+      setErro(mensagemDeErro(error, "Não foi possível realizar o cadastro."));
     }
   }
 

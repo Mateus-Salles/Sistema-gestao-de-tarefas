@@ -4,6 +4,7 @@ import {
   ehAdministrador,
   nomeDoNivel
 } from "../utils/perfil";
+import { logout } from "../services/api";
 import "./Layout.css";
 
 const ITENS_MENU = [
@@ -23,8 +24,8 @@ function Layout({ titulo, subtitulo, children }) {
     (item) => !item.somenteAdmin || admin
   );
 
-  function sair() {
-    localStorage.removeItem("usuario");
+  async function sair() {
+    await logout();
     navigate("/", { replace: true });
   }
 
