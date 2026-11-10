@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTarefas, getProjetos } from "../services/api";
-import { getUsuarioLogado, ehAdministrador as verificarAdmin, nomeDoNivel } from "../utils/perfil";
+import { getUsuarioLogado } from "../utils/perfil";
+import Layout from "../components/Layout";
 import "./Dashboard.css";
 
 function Dashboard() {
@@ -11,8 +12,6 @@ function Dashboard() {
 
   const [tarefas, setTarefas] = useState([]);
   const [projetos, setProjetos] = useState([]);
-
-  const ehAdministrador = verificarAdmin(usuario);
 
   useEffect(() => {
     async function carregarDados() {
@@ -29,11 +28,6 @@ function Dashboard() {
 
     carregarDados();
   }, []);
-
-  function sair() {
-    localStorage.removeItem("usuario");
-    navigate("/");
-  }
 
   const totalTarefas = tarefas.length;
   const emAndamento = tarefas.filter(
@@ -52,61 +46,10 @@ function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
-      <aside className="sidebar">
-        <h2>GESTOR</h2>
-
-        <nav className="sidebar-menu">
-          <button
-            className="menu-item active"
-            onClick={() => navigate("/dashboard")}
-          >
-            Dashboard
-          </button>
-
-          {ehAdministrador && (
-            <button
-              className="menu-item"
-              onClick={() => navigate("/clientes")}
-            >
-              Clientes
-            </button>
-          )}
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/projetos")}
-          >
-            Projetos
-          </button>
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/tarefas")}
-          >
-            Kanban
-          </button>
-        </nav>
-
-        <button className="logout-button" onClick={sair}>
-          Sair
-        </button>
-      </aside>
-
-      <main className="dashboard-content">
-        <header className="dashboard-header">
-          <div>
-            <h1>Dashboard</h1>
-            <p>Acompanhe as atividades e os projetos da equipe.</p>
-          </div>
-
-          <div className="user-info">
-            <span>{usuario?.nome || "Usuário"}</span>
-            <span>·</span>
-            <span>{nomeDoNivel(usuario)}</span>
-          </div>
-        </header>
-
+    <Layout
+      titulo="Dashboard"
+      subtitulo="Acompanhe as atividades e os projetos da equipe."
+    >
         <section className="dashboard-body">
           <div className="stats">
             <div className="stat-card">
@@ -178,8 +121,7 @@ function Dashboard() {
             </div>
           </section>
         </section>
-      </main>
-    </div>
+    </Layout>
   );
 }
 

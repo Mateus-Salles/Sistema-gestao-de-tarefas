@@ -5,6 +5,7 @@ import {
   atualizarProjeto
 } from "../services/api";
 import { getUsuarioLogado, ehAdministrador as verificarAdmin } from "../utils/perfil";
+import Layout from "../components/Layout";
 import "./Projetos.css";
 
 function Projetos() {
@@ -113,7 +114,7 @@ function Projetos() {
   });
 
   return (
-    <div className="projetos-page">
+    <Layout titulo="Projetos" subtitulo="Lançamentos da agência e seu andamento.">
       <div className="projetos-content">
         <div className="projetos-filtros">
           <input
@@ -235,7 +236,7 @@ function Projetos() {
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

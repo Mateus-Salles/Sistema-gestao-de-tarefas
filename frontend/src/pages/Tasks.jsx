@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   getTarefas,
   criarTarefa,
   atualizarTarefa
 } from "../services/api";
-import { getUsuarioLogado, ehAdministrador as verificarAdmin, nomeDoNivel } from "../utils/perfil";
+import { getUsuarioLogado } from "../utils/perfil";
+import Layout from "../components/Layout";
 import "./Tasks.css";
 
 function Tasks() {
-  const navigate = useNavigate();
-
   const usuario = getUsuarioLogado();
-  const ehAdministrador = verificarAdmin(usuario);
 
   const [tarefas, setTarefas] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -235,68 +232,7 @@ function Tasks() {
   }
 
   return (
-    <div className="kanban-page">
-      <aside className="sidebar">
-        <h2>GESTOR</h2>
-
-        <nav className="sidebar-menu">
-          <button
-            className="menu-item"
-            onClick={() => navigate("/dashboard")}
-          >
-            Dashboard
-          </button>
-
-          {ehAdministrador && (
-            <button
-              className="menu-item"
-              onClick={() => navigate("/clientes")}
-            >
-              Clientes
-            </button>
-          )}
-
-          <button
-            className="menu-item"
-            onClick={() => navigate("/projetos")}
-          >
-            Projetos
-          </button>
-
-          <button className="menu-item active">
-            Kanban
-          </button>
-
-          {ehAdministrador && (
-            <button className="menu-item">
-              Usuários
-            </button>
-          )}
-        </nav>
-
-        <button
-          className="logout-button"
-          onClick={() => {
-            localStorage.removeItem("usuario");
-            navigate("/");
-          }}
-        >
-          Sair
-        </button>
-      </aside>
-
-      <main className="kanban-content">
-        <header className="kanban-header">
-          <h1>
-            Kanban · Lançamento Verão — Nutri Maternal
-          </h1>
-
-          <div className="kanban-user">
-            {usuario?.nome || "Usuário"} ·{" "}
-            {nomeDoNivel(usuario)}
-          </div>
-        </header>
-
+    <Layout titulo="Kanban" subtitulo="Acompanhe o andamento das tarefas.">
         <section className="kanban-body">
           <div className="kanban-top">
             <div className="kanban-tabs">
@@ -482,8 +418,7 @@ function Tasks() {
             </div>
           </div>
         </section>
-      </main>
-    </div>
+    </Layout>
   );
 }
 
