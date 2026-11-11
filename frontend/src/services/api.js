@@ -1,12 +1,18 @@
+// Chamadas à API do sistema, seguindo o contrato em docs/openapi.json.
 import axios from "axios";
-import { ehAdministrador, NIVEL_COLABORADOR } from "../utils/perfil";
 import { getToken, limparSessao } from "./sessao";
+import { simuladorAdapter } from "./simulador";
 
-// Endereço da API. Configure em frontend/.env (veja .env.example).
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// Endereço da API, já com o prefixo /v1. Configure em frontend/.env.
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/v1";
+
+// Enquanto o back-end não tem todas as rotas, o simulador responde no lugar.
+// Para usar o back-end real: VITE_USAR_SIMULADOR=false no frontend/.env.
+export const USANDO_SIMULADOR = import.meta.env.VITE_USAR_SIMULADOR !== "false";
 
 export const api = axios.create({
   baseURL: API_URL,
+  ...(USANDO_SIMULADOR ? { adapter: simuladorAdapter } : {})
 });
 
 // Envia o token JWT em todas as requisições, quando houver.
@@ -21,13 +27,17 @@ api.interceptors.request.use((config) => {
 });
 
 // Token ausente, expirado ou revogado: encerra a sessão e volta para o login.
-// O login em si também responde 401 (senha errada), então ele fica de fora.
+// Login (senha errada) e troca de senha (senha atual errada) também respondem
+// 401, mas nesses casos o usuário deve ver a mensagem, não ser deslogado.
+const ROTAS_401_ESPERADO = ["/auth/login", "/auth/senha"];
+
 api.interceptors.response.use(
   (resposta) => resposta,
   (erro) => {
-    const ehLogin = erro.config?.url?.includes("/auth/login");
+    const url = erro.config?.url || "";
+    const esperado = ROTAS_401_ESPERADO.some((rota) => url.includes(rota));
 
-    if (erro.response?.status === 401 && !ehLogin) {
+    if (erro.response?.status === 401 && !esperado) {
       limparSessao();
       window.location.assign("/");
     }
@@ -47,32 +57,29 @@ export function mensagemDeErro(erro, padrao = "Algo deu errado. Tente novamente.
   );
 }
 
-// LOGIN
-// Retorna { usuario, token } no mesmo formato da rota POST /v1/auth/login.
-// Enquanto o front usa o JSON Server, o usuário é conferido aqui e não há token.
-export async function login(email, senha) {
-  const resposta = await api.get("/usuarios");
+// Listas paginadas vêm como { dados, paginacao }. Pedimos uma página grande
+// para as telas receberem tudo de uma vez.
+const TODOS = { tamanho_pagina: 1000 };
 
-  const usuario = resposta.data.find(
-    (usuario) =>
-      usuario.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
-      usuario.senha === senha
-  );
-
-  if (!usuario) {
-    throw new Error("E-mail ou senha inválidos.");
-  }
-
-  return { usuario, token: null };
+async function listar(caminho, filtros = {}) {
+  const { data } = await api.get(caminho, { params: { ...TODOS, ...filtros } });
+  return data.dados;
 }
 
-// LOGOUT
-// Com token, avisa a API para revogá-lo (POST /v1/auth/logout).
-// Mesmo se a API falhar, a sessão local é encerrada.
+const pegarDados = (resposta) => resposta.data;
+
+// ---------- Autenticação ----------
+
+// Retorna { token, usuario }.
+export function login(email, senha) {
+  return api.post("/auth/login", { email: email.trim(), senha }).then(pegarDados);
+}
+
+// Avisa a API para revogar o token. Mesmo se falhar, a sessão local é encerrada.
 export async function logout() {
   try {
     if (getToken()) {
-      await api.post("/v1/auth/logout");
+      await api.post("/auth/logout");
     }
   } catch {
     // Ignora: o usuário sai de qualquer forma.
@@ -81,102 +88,78 @@ export async function logout() {
   }
 }
 
-// CADASTRO DE USUÁRIO
-// Todo cadastro público entra como colaborador.
-// Só um administrador pode promover alguém (tela de gestão de usuários).
-export async function cadastrarUsuario(nome, email, senha) {
-  const resposta = await api.get("/usuarios");
-
-  const emailExiste = resposta.data.some(
-    (usuario) =>
-      usuario.email?.trim().toLowerCase() === email.trim().toLowerCase()
-  );
-
-  if (emailExiste) {
-    throw new Error("Este e-mail já está cadastrado.");
-  }
-
-  const novoUsuario = {
-    nome: nome.trim(),
-    email: email.trim(),
-    senha,
-    nivel_acesso: NIVEL_COLABORADOR,
-  };
-
-  const cadastro = await api.post("/usuarios", novoUsuario);
-
-  return cadastro.data;
+export function alterarSenha(senha_atual, senha_nova) {
+  return api.patch("/auth/senha", { senha_atual, senha_nova });
 }
 
-// TAREFAS
-export async function getTarefas(usuario) {
-  const resposta = await api.get("/tarefas");
-  const tarefas = resposta.data;
+// ---------- Usuários ----------
 
-  // Sem usuário informado, retorna todas para não deixar a tela vazia.
-  // Depois conectaremos o usuário logado ao filtro.
-  if (!usuario || ehAdministrador(usuario)) {
-    return tarefas;
-  }
+export const listarUsuarios = (filtros) => listar("/usuarios", filtros);
+export const buscarMeuUsuario = () => api.get("/usuarios/me").then(pegarDados);
+export const buscarUsuario = (id) => api.get(`/usuarios/${id}`).then(pegarDados);
+export const criarUsuario = (dados) => api.post("/usuarios", dados).then(pegarDados);
+export const editarUsuario = (id, dados) => api.patch(`/usuarios/${id}`, dados).then(pegarDados);
+export const alterarStatusUsuario = (id, status) =>
+  api.patch(`/usuarios/${id}/status`, { status }).then(pegarDados);
 
-  return tarefas.filter(
-    (tarefa) =>
-      tarefa.responsavel?.trim().toLowerCase() ===
-      usuario.nome?.trim().toLowerCase()
-  );
-}
+// ---------- Clientes ----------
 
-export async function criarTarefa(tarefa) {
-  const resposta = await api.post("/tarefas", tarefa);
-  return resposta.data;
-}
+export const listarClientes = (filtros) => listar("/clientes", filtros);
+export const buscarCliente = (id) => api.get(`/clientes/${id}`).then(pegarDados);
+export const criarCliente = (dados) => api.post("/clientes", dados).then(pegarDados);
+export const editarCliente = (id, dados) => api.patch(`/clientes/${id}`, dados).then(pegarDados);
+export const alterarStatusCliente = (id, status) =>
+  api.patch(`/clientes/${id}/status`, { status }).then(pegarDados);
 
-export async function atualizarTarefa(id, tarefa) {
-  const resposta = await api.put(`/tarefas/${id}`, tarefa);
-  return resposta.data;
-}
+// ---------- Modelos de lançamento ----------
 
-// PROJETOS
-export async function getProjetos(usuario) {
-  const resposta = await api.get("/projetos");
-  const projetos = resposta.data;
+export const listarModelos = () => api.get("/modelos-lancamento").then(pegarDados);
+// Inclui tarefas_padrao.
+export const buscarModelo = (id) => api.get(`/modelos-lancamento/${id}`).then(pegarDados);
+export const criarModelo = (nome) => api.post("/modelos-lancamento", { nome }).then(pegarDados);
+export const editarModelo = (id, nome) =>
+  api.patch(`/modelos-lancamento/${id}`, { nome }).then(pegarDados);
+export const excluirModelo = (id) => api.delete(`/modelos-lancamento/${id}`);
 
-  // Sem usuário informado, retorna todos para não deixar a tela vazia.
-  if (!usuario || ehAdministrador(usuario)) {
-    return projetos;
-  }
+export const criarTarefaPadrao = (modeloId, dados) =>
+  api.post(`/modelos-lancamento/${modeloId}/tarefas-padrao`, dados).then(pegarDados);
+export const editarTarefaPadrao = (modeloId, tarefaId, dados) =>
+  api.patch(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`, dados).then(pegarDados);
+export const excluirTarefaPadrao = (modeloId, tarefaId) =>
+  api.delete(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`);
 
-  return projetos.filter((projeto) =>
-    projeto.responsaveis?.some(
-      (nome) =>
-        nome.trim().toLowerCase() ===
-        usuario.nome?.trim().toLowerCase()
-    )
-  );
-}
+// ---------- Projetos ----------
 
-export async function criarProjeto(projeto) {
-  const resposta = await api.post("/projetos", projeto);
-  return resposta.data;
-}
+export const listarProjetos = (filtros) => listar("/projetos", filtros);
+export const buscarProjeto = (id) => api.get(`/projetos/${id}`).then(pegarDados);
+// Ao criar, a API gera as tarefas do modelo escolhido.
+export const criarProjeto = (dados) => api.post("/projetos", dados).then(pegarDados);
+export const editarProjeto = (id, dados) => api.patch(`/projetos/${id}`, dados).then(pegarDados);
+export const alterarStatusProjeto = (id, status) =>
+  api.patch(`/projetos/${id}/status`, { status }).then(pegarDados);
+export const buscarProgressoProjeto = (id) =>
+  api.get(`/projetos/${id}/progresso`).then(pegarDados);
 
-export async function atualizarProjeto(id, projeto) {
-  const resposta = await api.put(`/projetos/${id}`, projeto);
-  return resposta.data;
-}
+// ---------- Tarefas ----------
 
-// CLIENTES
-export async function getClientes() {
-  const resposta = await api.get("/clientes");
-  return resposta.data;
-}
+// O próprio back-end aplica a visibilidade: colaborador recebe só as tarefas
+// atribuídas a ele ou criadas por ele (RN01, RN02).
+export const listarTarefas = (filtros) => listar("/tarefas", filtros);
+export const listarTarefasAtrasadas = () => api.get("/tarefas/atrasadas").then(pegarDados);
+export const buscarTarefa = (id) => api.get(`/tarefas/${id}`).then(pegarDados);
+export const criarTarefa = (dados) => api.post("/tarefas", dados).then(pegarDados);
+export const editarTarefa = (id, dados) => api.patch(`/tarefas/${id}`, dados).then(pegarDados);
+export const excluirTarefa = (id) => api.delete(`/tarefas/${id}`);
+export const atribuirResponsavel = (id, responsavel_id) =>
+  api.patch(`/tarefas/${id}/responsavel`, { responsavel_id }).then(pegarDados);
+export const moverTarefa = (id, kanban_status) =>
+  api.patch(`/tarefas/${id}/status`, { kanban_status }).then(pegarDados);
 
-export async function criarCliente(cliente) {
-  const resposta = await api.post("/clientes", cliente);
-  return resposta.data;
-}
+// ---------- Kanban ----------
 
-export async function atualizarCliente(id, cliente) {
-  const resposta = await api.put(`/clientes/${id}`, cliente);
-  return resposta.data;
-} 
+export const buscarKanbanProjeto = (id, filtros) =>
+  api.get(`/projetos/${id}/kanban`, { params: filtros }).then(pegarDados);
+export const buscarMeuKanban = (filtros) =>
+  api.get("/usuarios/me/kanban", { params: filtros }).then(pegarDados);
+export const buscarKanbanUsuario = (id, filtros) =>
+  api.get(`/usuarios/${id}/kanban`, { params: filtros }).then(pegarDados);

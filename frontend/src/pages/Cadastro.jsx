@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { cadastrarUsuario, mensagemDeErro } from "../services/api";
+import { mensagemDeErro } from "../services/api";
+import { cadastrarUsuario } from "../services/apiJsonServer";
 import "./Cadastro.css";
 
 function Cadastro() {

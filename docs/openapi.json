@@ -1,0 +1,1941 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "API — Sistema de Gestão de Tarefas (Forge Growth)",
+  "description": "API para o sistema de gestão de tarefas inspirado no ClickUp, organizando a execução de lançamentos digitais em Cliente → Projeto → Tarefas, com quadro Kanban e dois níveis de acesso (Administrador e Colaborador).\n",
+  "version": "0.1.0",
+  "contact": {
+   "name": "Forge Growth"
+  }
+ },
+ "servers": [
+  {
+   "url": "https://api.forcegrowth.com/v1",
+   "description": "Ambiente de produção"
+  }
+ ],
+ "tags": [
+  {
+   "name": "Autenticação"
+  },
+  {
+   "name": "Usuários"
+  },
+  {
+   "name": "Clientes"
+  },
+  {
+   "name": "Modelos de Lançamento"
+  },
+  {
+   "name": "Projetos"
+  },
+  {
+   "name": "Tarefas"
+  },
+  {
+   "name": "Kanban"
+  }
+ ],
+ "security": [
+  {
+   "bearerAuth": []
+  }
+ ],
+ "paths": {
+  "/auth/login": {
+   "post": {
+    "tags": [
+     "Autenticação"
+    ],
+    "summary": "Login com e-mail e senha (RF01)",
+    "security": [],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "email",
+         "senha"
+        ],
+        "properties": {
+         "email": {
+          "type": "string",
+          "format": "email"
+         },
+         "senha": {
+          "type": "string",
+          "format": "password"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Login bem-sucedido",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "token": {
+           "type": "string"
+          },
+          "usuario": {
+           "$ref": "#/components/schemas/Usuario"
+          }
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     }
+    }
+   }
+  },
+  "/auth/logout": {
+   "post": {
+    "tags": [
+     "Autenticação"
+    ],
+    "summary": "Invalida o token/sessão atual",
+    "responses": {
+     "204": {
+      "description": "Logout realizado com sucesso"
+     }
+    }
+   }
+  },
+  "/auth/senha": {
+   "patch": {
+    "tags": [
+     "Autenticação"
+    ],
+    "summary": "Usuário logado altera a própria senha (RF04)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "senha_atual",
+         "senha_nova"
+        ],
+        "properties": {
+         "senha_atual": {
+          "type": "string",
+          "format": "password"
+         },
+         "senha_nova": {
+          "type": "string",
+          "format": "password"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Senha alterada com sucesso"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     }
+    }
+   }
+  },
+  "/usuarios": {
+   "get": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Lista usuários (RF02)",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/StatusUsuarioFiltro"
+     },
+     {
+      "$ref": "#/components/parameters/Pagina"
+     },
+     {
+      "$ref": "#/components/parameters/TamanhoPagina"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Lista de usuários",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dados": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Usuario"
+           }
+          },
+          "paginacao": {
+           "$ref": "#/components/schemas/Paginacao"
+          }
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Cadastra usuário (RF02)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UsuarioEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Usuário criado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "409": {
+      "description": "E-mail já cadastrado"
+     }
+    }
+   }
+  },
+  "/usuarios/me": {
+   "get": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Dados do usuário logado, usados para definir o que a UI exibe (RF05)",
+    "responses": {
+     "200": {
+      "description": "Dados do usuário logado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/usuarios/me/kanban": {
+   "get": {
+    "tags": [
+     "Kanban"
+    ],
+    "summary": "Kanban individual do colaborador logado (RF30)",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/DivisaoFiltro"
+     },
+     {
+      "$ref": "#/components/parameters/KanbanStatusFiltro"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Tarefas atribuídas ao usuário logado ou criadas por ele",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Tarefa"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/usuarios/{id}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Detalhe de um usuário (RF02)",
+    "responses": {
+     "200": {
+      "description": "Dados do usuário",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Edita dados de um usuário (RF02)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UsuarioEdicao"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Usuário atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   }
+  },
+  "/usuarios/{id}/status": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Usuários"
+    ],
+    "summary": "Ativa ou inativa um usuário (RF02, RN08 — histórico de tarefas é preservado)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "status"
+        ],
+        "properties": {
+         "status": {
+          "$ref": "#/components/schemas/StatusUsuario"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Status atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Usuario"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/usuarios/{id}/kanban": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Kanban"
+    ],
+    "summary": "Kanban individual de qualquer colaborador, visto pelo administrador (RF31)",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/DivisaoFiltro"
+     },
+     {
+      "$ref": "#/components/parameters/KanbanStatusFiltro"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Tarefas atribuídas ao colaborador ou criadas por ele",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Tarefa"
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/clientes": {
+   "get": {
+    "tags": [
+     "Clientes"
+    ],
+    "summary": "Lista clientes (RF09)",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/StatusClienteFiltro"
+     },
+     {
+      "$ref": "#/components/parameters/Pagina"
+     },
+     {
+      "$ref": "#/components/parameters/TamanhoPagina"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Lista de clientes",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dados": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Cliente"
+           }
+          },
+          "paginacao": {
+           "$ref": "#/components/schemas/Paginacao"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Clientes"
+    ],
+    "summary": "Cadastra cliente (RF06, RN04 — somente administrador)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClienteEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Cliente criado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Cliente"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/clientes/{id}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Clientes"
+    ],
+    "summary": "Detalhe do cliente (RF06)",
+    "responses": {
+     "200": {
+      "description": "Dados do cliente",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Cliente"
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Clientes"
+    ],
+    "summary": "Edita dados do cliente (RF08)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClienteEdicao"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Cliente atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Cliente"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   }
+  },
+  "/clientes/{id}/status": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Clientes"
+    ],
+    "summary": "Ativa ou inativa o cliente (RF07, RF08)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "status"
+        ],
+        "properties": {
+         "status": {
+          "$ref": "#/components/schemas/StatusCliente"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Status atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Cliente"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/modelos-lancamento": {
+   "get": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Lista modelos de lançamento (RF11)",
+    "responses": {
+     "200": {
+      "description": "Lista de modelos",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ModeloLancamento"
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Cadastra modelo de lançamento (RF11)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ModeloLancamentoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Modelo criado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModeloLancamento"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/modelos-lancamento/{id}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Detalhe do modelo, incluindo tarefas padrão (RF12)",
+    "responses": {
+     "200": {
+      "description": "Dados do modelo",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModeloLancamentoDetalhado"
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Edita modelo de lançamento (RF13)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ModeloLancamentoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Modelo atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModeloLancamento"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Exclui modelo de lançamento (RF13). A alteração/exclusão de um modelo não afeta projetos já criados a partir dele (RF14).\n",
+    "responses": {
+     "204": {
+      "description": "Modelo excluído"
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "409": {
+      "description": "Modelo em uso por projetos existentes e não pode ser excluído"
+     }
+    }
+   }
+  },
+  "/modelos-lancamento/{id}/tarefas-padrao": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Lista as tarefas padrão do modelo (RF12)",
+    "responses": {
+     "200": {
+      "description": "Lista de tarefas padrão",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TarefaPadrao"
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Adiciona uma tarefa padrão ao modelo (RF12)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TarefaPadraoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Tarefa padrão criada",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TarefaPadrao"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/modelos-lancamento/{id}/tarefas-padrao/{tarefaId}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    },
+    {
+     "name": "tarefaId",
+     "in": "path",
+     "required": true,
+     "schema": {
+      "type": "integer"
+     }
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Edita uma tarefa padrão do modelo (RF12)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TarefaPadraoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Tarefa padrão atualizada",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TarefaPadrao"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Modelos de Lançamento"
+    ],
+    "summary": "Remove uma tarefa padrão do modelo (RF12)",
+    "responses": {
+     "204": {
+      "description": "Tarefa padrão removida"
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/projetos": {
+   "get": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Lista projetos (RF15)",
+    "parameters": [
+     {
+      "name": "cliente_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "schema": {
+       "$ref": "#/components/schemas/StatusProjeto"
+      }
+     },
+     {
+      "$ref": "#/components/parameters/Pagina"
+     },
+     {
+      "$ref": "#/components/parameters/TamanhoPagina"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Lista de projetos",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dados": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Projeto"
+           }
+          },
+          "paginacao": {
+           "$ref": "#/components/schemas/Paginacao"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Cria projeto vinculado a um cliente ativo e a um modelo de lançamento (RF15, RN05). Ao criar, o sistema gera automaticamente as tarefas do modelo escolhido, já distribuídas nas divisões (RF16).\n",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjetoEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Projeto criado (com as tarefas padrão já geradas)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Projeto"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "409": {
+      "description": "Cliente inativo — projeto não pode ser criado (RN05)"
+     }
+    }
+   }
+  },
+  "/projetos/{id}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Detalhe do projeto (RF17)",
+    "responses": {
+     "200": {
+      "description": "Dados do projeto",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Projeto"
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Edita nome e datas do projeto (RF17)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjetoEdicao"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Projeto atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Projeto"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/projetos/{id}/status": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Altera o status do projeto (RF19). Só pode virar \"concluido\" quando todas as tarefas estiverem na coluna Concluído (RN07).\n",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "status"
+        ],
+        "properties": {
+         "status": {
+          "$ref": "#/components/schemas/StatusProjeto"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Status atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Projeto"
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     },
+     "409": {
+      "description": "Existem tarefas pendentes; o projeto não pode ser concluído (RN07)"
+     }
+    }
+   }
+  },
+  "/projetos/{id}/kanban": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Kanban"
+    ],
+    "summary": "Kanban completo do projeto, com filtro por divisão e responsável (RF20)",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/DivisaoFiltro"
+     },
+     {
+      "name": "responsavel_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "$ref": "#/components/parameters/KanbanStatusFiltro"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Tarefas do projeto",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Tarefa"
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/projetos/{id}/progresso": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Projetos"
+    ],
+    "summary": "Percentual de conclusão do projeto, apoiando a regra RN07",
+    "responses": {
+     "200": {
+      "description": "Progresso do projeto",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProgressoProjeto"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/tarefas": {
+   "get": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Lista tarefas (RF20). Colaborador só vê tarefas atribuídas a ele ou criadas por ele (RN01); tarefas criadas por um colaborador só aparecem para ele e para o administrador (RN02).\n",
+    "parameters": [
+     {
+      "name": "projeto_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "$ref": "#/components/parameters/DivisaoFiltro"
+     },
+     {
+      "name": "responsavel_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "$ref": "#/components/parameters/KanbanStatusFiltro"
+     },
+     {
+      "$ref": "#/components/parameters/Pagina"
+     },
+     {
+      "$ref": "#/components/parameters/TamanhoPagina"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Lista de tarefas",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dados": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Tarefa"
+           }
+          },
+          "paginacao": {
+           "$ref": "#/components/schemas/Paginacao"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Cria tarefa dentro de um projeto ou avulsa (RF21, RF23)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TarefaEntrada"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Tarefa criada",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Tarefa"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Responsável informado não é de nível colaborador (RN03)"
+     }
+    }
+   }
+  },
+  "/tarefas/atrasadas": {
+   "get": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Lista tarefas com prazo vencido, para destaque visual (RF27)",
+    "responses": {
+     "200": {
+      "description": "Tarefas atrasadas",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Tarefa"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/tarefas/{id}": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "get": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Detalhe da tarefa (visibilidade conforme RN01/RN02)",
+    "responses": {
+     "200": {
+      "description": "Dados da tarefa",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Tarefa"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Usuário não tem visibilidade sobre esta tarefa (RN01/RN02)"
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Edita título, descrição, divisão e prazo da tarefa (RF21)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TarefaEdicao"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Tarefa atualizada",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Tarefa"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Exclui tarefa (somente administrador) (RF26)",
+    "responses": {
+     "204": {
+      "description": "Tarefa excluída"
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
+     }
+    }
+   }
+  },
+  "/tarefas/{id}/responsavel": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Tarefas"
+    ],
+    "summary": "Atribui ou reatribui o responsável pela tarefa (RF22). Só pode ser um usuário de nível colaborador (RN03).\n",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "responsavel_id"
+        ],
+        "properties": {
+         "responsavel_id": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Responsável atualizado",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Tarefa"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Ou quem chamou não é administrador, ou o usuário indicado não é de nível colaborador (RN03)\n"
+     },
+     "409": {
+      "description": "Usuário indicado está inativo"
+     }
+    }
+   }
+  },
+  "/tarefas/{id}/status": {
+   "parameters": [
+    {
+     "$ref": "#/components/parameters/IdPath"
+    }
+   ],
+   "patch": {
+    "tags": [
+     "Kanban"
+    ],
+    "summary": "Move a tarefa entre as colunas do Kanban, por arrastar e soltar (RF24, RF29). Só o responsável pela tarefa ou um administrador pode movê-la.\n",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "kanban_status"
+        ],
+        "properties": {
+         "kanban_status": {
+          "$ref": "#/components/schemas/KanbanStatus"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Tarefa movida",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Tarefa"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Somente o responsável pela tarefa ou um administrador pode movê-la (RF24)"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "bearerAuth": {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "JWT"
+   }
+  },
+  "parameters": {
+   "IdPath": {
+    "name": "id",
+    "in": "path",
+    "required": true,
+    "schema": {
+     "type": "integer"
+    }
+   },
+   "Pagina": {
+    "name": "pagina",
+    "in": "query",
+    "schema": {
+     "type": "integer",
+     "default": 1
+    }
+   },
+   "TamanhoPagina": {
+    "name": "tamanho_pagina",
+    "in": "query",
+    "schema": {
+     "type": "integer",
+     "default": 20
+    }
+   },
+   "StatusUsuarioFiltro": {
+    "name": "status",
+    "in": "query",
+    "schema": {
+     "$ref": "#/components/schemas/StatusUsuario"
+    }
+   },
+   "StatusClienteFiltro": {
+    "name": "status",
+    "in": "query",
+    "schema": {
+     "$ref": "#/components/schemas/StatusCliente"
+    }
+   },
+   "DivisaoFiltro": {
+    "name": "divisao",
+    "in": "query",
+    "schema": {
+     "$ref": "#/components/schemas/Divisao"
+    }
+   },
+   "KanbanStatusFiltro": {
+    "name": "kanban_status",
+    "in": "query",
+    "schema": {
+     "$ref": "#/components/schemas/KanbanStatus"
+    }
+   }
+  },
+  "responses": {
+   "NaoAutorizado": {
+    "description": "Credenciais inválidas ou token ausente/expirado"
+   },
+   "ProibidoSomenteAdmin": {
+    "description": "Ação permitida apenas para administradores"
+   },
+   "NaoEncontrado": {
+    "description": "Recurso não encontrado"
+   }
+  },
+  "schemas": {
+   "Paginacao": {
+    "type": "object",
+    "properties": {
+     "pagina": {
+      "type": "integer"
+     },
+     "tamanho_pagina": {
+      "type": "integer"
+     },
+     "total": {
+      "type": "integer"
+     }
+    }
+   },
+   "StatusUsuario": {
+    "type": "string",
+    "enum": [
+     "ativo",
+     "inativo"
+    ]
+   },
+   "NivelAcesso": {
+    "type": "string",
+    "enum": [
+     "administrador",
+     "colaborador"
+    ]
+   },
+   "StatusCliente": {
+    "type": "string",
+    "enum": [
+     "ativa",
+     "inativa"
+    ]
+   },
+   "StatusProjeto": {
+    "type": "string",
+    "enum": [
+     "andamento",
+     "concluido",
+     "cancelado"
+    ]
+   },
+   "Divisao": {
+    "type": "string",
+    "enum": [
+     "produto",
+     "conteudo",
+     "trafego",
+     "disparos"
+    ]
+   },
+   "KanbanStatus": {
+    "type": "string",
+    "enum": [
+     "a_fazer",
+     "em_andamento",
+     "em_revisao",
+     "concluido"
+    ]
+   },
+   "Usuario": {
+    "type": "object",
+    "properties": {
+     "id_usuario": {
+      "type": "integer"
+     },
+     "nome": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string",
+      "format": "email"
+     },
+     "nivel_acesso": {
+      "$ref": "#/components/schemas/NivelAcesso"
+     },
+     "status": {
+      "$ref": "#/components/schemas/StatusUsuario"
+     },
+     "criado_em": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "UsuarioEntrada": {
+    "type": "object",
+    "required": [
+     "nome",
+     "email",
+     "senha",
+     "nivel_acesso"
+    ],
+    "properties": {
+     "nome": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string",
+      "format": "email"
+     },
+     "senha": {
+      "type": "string",
+      "format": "password"
+     },
+     "nivel_acesso": {
+      "$ref": "#/components/schemas/NivelAcesso"
+     }
+    }
+   },
+   "UsuarioEdicao": {
+    "type": "object",
+    "properties": {
+     "nome": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string",
+      "format": "email"
+     },
+     "nivel_acesso": {
+      "$ref": "#/components/schemas/NivelAcesso"
+     }
+    }
+   },
+   "Cliente": {
+    "type": "object",
+    "properties": {
+     "id_cliente": {
+      "type": "integer"
+     },
+     "nome": {
+      "type": "string"
+     },
+     "contato": {
+      "type": "string"
+     },
+     "status": {
+      "$ref": "#/components/schemas/StatusCliente"
+     },
+     "criado_em": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ClienteEntrada": {
+    "type": "object",
+    "required": [
+     "nome",
+     "contato"
+    ],
+    "properties": {
+     "nome": {
+      "type": "string"
+     },
+     "contato": {
+      "type": "string"
+     }
+    }
+   },
+   "ClienteEdicao": {
+    "type": "object",
+    "properties": {
+     "nome": {
+      "type": "string"
+     },
+     "contato": {
+      "type": "string"
+     }
+    }
+   },
+   "ModeloLancamento": {
+    "type": "object",
+    "properties": {
+     "id_modelo_lancamento": {
+      "type": "integer"
+     },
+     "nome": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ativo",
+       "inativo"
+      ]
+     },
+     "criado_em": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ModeloLancamentoEntrada": {
+    "type": "object",
+    "required": [
+     "nome"
+    ],
+    "properties": {
+     "nome": {
+      "type": "string"
+     }
+    }
+   },
+   "ModeloLancamentoDetalhado": {
+    "allOf": [
+     {
+      "$ref": "#/components/schemas/ModeloLancamento"
+     },
+     {
+      "type": "object",
+      "properties": {
+       "tarefas_padrao": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/TarefaPadrao"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "TarefaPadrao": {
+    "type": "object",
+    "properties": {
+     "id_tarefa_padrao": {
+      "type": "integer"
+     },
+     "modelo_lancamento_id": {
+      "type": "integer"
+     },
+     "titulo": {
+      "type": "string"
+     },
+     "divisao": {
+      "$ref": "#/components/schemas/Divisao"
+     }
+    }
+   },
+   "TarefaPadraoEntrada": {
+    "type": "object",
+    "required": [
+     "titulo",
+     "divisao"
+    ],
+    "properties": {
+     "titulo": {
+      "type": "string"
+     },
+     "divisao": {
+      "$ref": "#/components/schemas/Divisao"
+     }
+    }
+   },
+   "Projeto": {
+    "type": "object",
+    "properties": {
+     "id_projeto": {
+      "type": "integer"
+     },
+     "cliente_id": {
+      "type": "integer"
+     },
+     "modelo_lancamento_id": {
+      "type": "integer"
+     },
+     "nome": {
+      "type": "string"
+     },
+     "data_comeco": {
+      "type": "string",
+      "format": "date"
+     },
+     "data_final": {
+      "type": "string",
+      "format": "date"
+     },
+     "status": {
+      "$ref": "#/components/schemas/StatusProjeto"
+     },
+     "criado_em": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ProjetoEntrada": {
+    "type": "object",
+    "required": [
+     "cliente_id",
+     "modelo_lancamento_id",
+     "nome",
+     "data_comeco",
+     "data_final"
+    ],
+    "properties": {
+     "cliente_id": {
+      "type": "integer"
+     },
+     "modelo_lancamento_id": {
+      "type": "integer"
+     },
+     "nome": {
+      "type": "string"
+     },
+     "data_comeco": {
+      "type": "string",
+      "format": "date"
+     },
+     "data_final": {
+      "type": "string",
+      "format": "date"
+     }
+    }
+   },
+   "ProjetoEdicao": {
+    "type": "object",
+    "properties": {
+     "nome": {
+      "type": "string"
+     },
+     "data_comeco": {
+      "type": "string",
+      "format": "date"
+     },
+     "data_final": {
+      "type": "string",
+      "format": "date"
+     }
+    }
+   },
+   "ProgressoProjeto": {
+    "type": "object",
+    "properties": {
+     "id_projeto": {
+      "type": "integer"
+     },
+     "total_tarefas": {
+      "type": "integer"
+     },
+     "tarefas_concluidas": {
+      "type": "integer"
+     },
+     "tarefas_pendentes": {
+      "type": "integer"
+     },
+     "percentual_concluido": {
+      "type": "number",
+      "format": "float"
+     }
+    }
+   },
+   "Tarefa": {
+    "type": "object",
+    "properties": {
+     "id_tarefa": {
+      "type": "integer"
+     },
+     "projeto_id": {
+      "type": "integer",
+      "nullable": true
+     },
+     "responsavel_id": {
+      "type": "integer",
+      "nullable": true
+     },
+     "criador_id": {
+      "type": "integer"
+     },
+     "titulo": {
+      "type": "string"
+     },
+     "descricao": {
+      "type": "string",
+      "nullable": true
+     },
+     "divisao": {
+      "$ref": "#/components/schemas/Divisao"
+     },
+     "kanban_status": {
+      "$ref": "#/components/schemas/KanbanStatus"
+     },
+     "vencimento": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+     },
+     "atrasada": {
+      "type": "boolean"
+     },
+     "criado_em": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "atualizado_em": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "TarefaEntrada": {
+    "type": "object",
+    "required": [
+     "titulo",
+     "divisao"
+    ],
+    "properties": {
+     "projeto_id": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Omitir para criar uma tarefa avulsa (RF23)"
+     },
+     "responsavel_id": {
+      "type": "integer",
+      "nullable": true
+     },
+     "titulo": {
+      "type": "string"
+     },
+     "descricao": {
+      "type": "string",
+      "nullable": true
+     },
+     "divisao": {
+      "$ref": "#/components/schemas/Divisao"
+     },
+     "vencimento": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+     }
+    }
+   },
+   "TarefaEdicao": {
+    "type": "object",
+    "properties": {
+     "titulo": {
+      "type": "string"
+     },
+     "descricao": {
+      "type": "string",
+      "nullable": true
+     },
+     "divisao": {
+      "$ref": "#/components/schemas/Divisao"
+     },
+     "vencimento": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+     }
+    }
+   }
+  }
+ }
+}

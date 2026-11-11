@@ -3,7 +3,7 @@ import {
   getTarefas,
   criarTarefa,
   atualizarTarefa
-} from "../services/api";
+} from "../services/apiJsonServer";
 import { getUsuarioLogado } from "../utils/perfil";
 import Layout from "../components/Layout";
 import "./Tasks.css";

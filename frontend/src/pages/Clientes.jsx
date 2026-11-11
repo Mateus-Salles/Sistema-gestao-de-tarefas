@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getClientes, criarCliente, atualizarCliente } from "../services/api"
+import { getClientes, criarCliente, atualizarCliente } from "../services/apiJsonServer"
 import Layout from "../components/Layout"
 import "./Clientes.css"
 

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTarefas, getProjetos } from "../services/api";
+import { getTarefas, getProjetos } from "../services/apiJsonServer";
 import { getUsuarioLogado } from "../utils/perfil";
 import Layout from "../components/Layout";
 import "./Dashboard.css";

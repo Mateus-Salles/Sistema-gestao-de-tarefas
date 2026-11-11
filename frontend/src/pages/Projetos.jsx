@@ -3,7 +3,7 @@ import {
   getProjetos,
   criarProjeto,
   atualizarProjeto
-} from "../services/api";
+} from "../services/apiJsonServer";
 import { getUsuarioLogado, ehAdministrador as verificarAdmin } from "../utils/perfil";
 import Layout from "../components/Layout";
 import "./Projetos.css";
