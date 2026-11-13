@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { login } from "../services/api";
+import { Link, useNavigate } from "react-router-dom";
+import { login, mensagemDeErro } from "../services/api";
+import { salvarSessao } from "../services/sessao";
 import "./Login.css";
 
 function Login() {
@@ -10,20 +11,18 @@ function Login() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
 
-  async function entrar() {
+  async function entrar(e) {
+    e.preventDefault();
     setErro("");
 
-    const usuario = await login(email, senha);
+    try {
+      const sessao = await login(email, senha);
 
-    if (!usuario) {
-      setErro("E-mail ou senha inválidos.");
-      return;
+      salvarSessao(sessao);
+      navigate("/dashboard", { replace: true });
+    } catch (erro) {
+      setErro(mensagemDeErro(erro, "Não foi possível entrar."));
     }
-
-    localStorage.setItem("usuario", JSON.stringify(usuario));
-
-    navigate("/dashboard");
-
   }
 
   return (
@@ -56,27 +55,25 @@ function Login() {
         <div className="login-container">
           <div className="login-header">
             <h2>Bem-vindo</h2>
-
             <p>Entre com suas credenciais para acessar o sistema.</p>
           </div>
 
-          <form className="login-form">
+          <form className="login-form" onSubmit={entrar}>
             <div className="form-group">
               <label htmlFor="email">E-mail</label>
-
               <input
                 type="email"
                 id="email"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
             <div className="form-group">
               <div className="password-label">
                 <label htmlFor="senha">Senha</label>
-
                 <a href="#">Esqueceu a senha?</a>
               </div>
 
@@ -86,14 +83,17 @@ function Login() {
                 placeholder="Digite sua senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
+                required
               />
             </div>
 
             {erro && <p className="login-error">{erro}</p>}
 
-            <button type="button" onClick={entrar}>
-              Entrar
-            </button>
+            <button type="submit">Entrar</button>
+
+            <p className="cadastro-link">
+              Não tem uma conta? <Link to="/cadastro">Cadastre-se</Link>
+            </p>
           </form>
         </div>
       </section>
