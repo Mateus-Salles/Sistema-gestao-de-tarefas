@@ -1,7 +1,7 @@
 import express from 'express';
 
-import routes from './routes'
-import { AppError } from './utils/AppError';
+import routes from './routes/index.js'
+import { AppError } from './utils/AppError.js';
 
 const API_PREFIX = '/v1';
 

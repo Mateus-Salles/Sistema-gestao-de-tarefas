@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 
-import authModel from '../models/auth.model';
-import userModel from '../models/users.model';
-import { AppError } from '../utils/AppError';
-import { getJwtConfig } from '../configs/jwt.config';
+import authModel from '../models/auth.model.js';
+import userModel from '../models/user.model.js';
+import { AppError } from '../utils/AppError.js';
+import { getJwtConfig } from '../configs/jwt.config.js';
 
 async function authenticate(req, res, next) {
   try {
@@ -31,8 +31,8 @@ async function authenticate(req, res, next) {
     }
 
     req.user = {
-      id: usuario.id_usuario,
-      accessLevel: usuario.nivel_acesso,
+      id: user.id_usuario,
+      accessLevel: user.nivel_acesso,
       jti: payload.jti,
       exp: payload.exp,
     };
@@ -43,7 +43,7 @@ async function authenticate(req, res, next) {
 }
 
 function onlyAdmin(req, res, next) {
-  if (req.user?.nivel !== 'administrador') {
+  if (req.user?.accessLevel !== 'administrador') {
     return next(new AppError('Ação permitida apenas para administradores', 403));
   }
   return next();

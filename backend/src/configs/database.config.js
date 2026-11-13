@@ -11,7 +11,7 @@ function loadDatabaseConfig(env = process.env) {
     host:                     env.DB_HOST || 'localhost',
     port:                     forNum(env.DB_PORT, 5432),
     user:                     env.DB_USER,
-    password:                 env.DB_PASSWORD,
+    password:                 env.DB_PASS,
     database:                 env.DB_NAME,
 
     max:                      forNum(env.DB_POOL_MAX, 10),
@@ -25,7 +25,7 @@ function loadDatabaseConfig(env = process.env) {
     const missing = ['user', 'password', 'database'].filter((key) => !config[key]);
 
     if (missing.length > 0) {
-      const names = { user: 'DB_USER', password: 'DB_PASSWORD', database: 'DB_NAME' };
+      const names = { user: 'DB_USER', password: 'DB_PASS', database: 'DB_NAME' };
 
       throw new Error(`[Config] Variáveis de ambiente do banco ausentes: ${missing.map((m) => names[m]).join(', ')}\n\n(ou defina DATABASE_URL).`);
     }

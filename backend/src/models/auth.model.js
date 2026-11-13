@@ -1,6 +1,6 @@
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/AppError.js';
 
-import database from "../database";
+import database from "../database/index.js";
 
 async function revokeToken(jti, expiresIn) {
   let client;
