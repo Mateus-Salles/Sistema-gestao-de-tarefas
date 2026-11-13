@@ -4,7 +4,7 @@ import { loadDatabaseConfig } from '../../src/configs/database.config.js';
 
 const ENV_MINIMO = {
   DB_USER: 'app',
-  DB_PASSWORD: 'segredo',
+  DB_PASS: 'segredo',
   DB_NAME: 'forge',
 };
 
@@ -28,13 +28,13 @@ describe('loadDatabaseConfig', () => {
     });
 
     it('lê process.env quando nenhum objeto é passado', () => {
-      const chaves = ['DATABASE_URL', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'DB_HOST'];
+      const chaves = ['DATABASE_URL', 'DB_USER', 'DB_PASS', 'DB_NAME', 'DB_HOST'];
       const backup = Object.fromEntries(chaves.map((c) => [c, process.env[c]]));
 
       try {
         delete process.env.DATABASE_URL;
         process.env.DB_USER = 'do_processo';
-        process.env.DB_PASSWORD = 'senha_processo';
+        process.env.DB_PASS = 'senha_processo';
         process.env.DB_NAME = 'banco_processo';
         process.env.DB_HOST = 'host-do-processo';
 
@@ -116,7 +116,7 @@ describe('loadDatabaseConfig', () => {
         (erro) => {
           assert.match(erro.message, /\[Config\]/);
           assert.match(erro.message, /DB_USER/);
-          assert.match(erro.message, /DB_PASSWORD/);
+          assert.match(erro.message, /DB_PASS/);
           assert.match(erro.message, /DB_NAME/);
           assert.match(erro.message, /DATABASE_URL/);
           return true;
@@ -128,7 +128,7 @@ describe('loadDatabaseConfig', () => {
       assert.throws(
         () => loadDatabaseConfig({ DB_USER: 'app', DB_NAME: 'forge' }),
         (erro) => {
-          assert.match(erro.message, /DB_PASSWORD/);
+          assert.match(erro.message, /DB_PASS/);
           assert.doesNotMatch(erro.message, /DB_USER/);
           assert.doesNotMatch(erro.message, /DB_NAME/);
           return true;
@@ -138,8 +138,8 @@ describe('loadDatabaseConfig', () => {
 
     it('considera texto vazio como variável ausente', () => {
       assert.throws(
-        () => loadDatabaseConfig({ ...ENV_MINIMO, DB_PASSWORD: '' }),
-        /DB_PASSWORD/
+        () => loadDatabaseConfig({ ...ENV_MINIMO, DB_PASS: '' }),
+        /DB_PASS/
       );
     });
   });

@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
-const CHAVES = ['DATABASE_URL', 'DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const CHAVES = ['DATABASE_URL', 'DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME'];
 
 describe('src/database/index.js (singleton)', () => {
   const backup = {};
@@ -12,7 +12,7 @@ describe('src/database/index.js (singleton)', () => {
     delete process.env.DATABASE_URL;
     process.env.DB_HOST = 'host-de-teste';
     process.env.DB_USER = 'usuario_teste';
-    process.env.DB_PASSWORD = 'senha_teste';
+    process.env.DB_PASS = 'senha_teste';
     process.env.DB_NAME = 'banco_teste';
   });
 
