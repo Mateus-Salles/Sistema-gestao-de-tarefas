@@ -148,7 +148,7 @@ describe('loadDatabaseConfig', () => {
     it('habilita SSL somente quando DB_SSL é exatamente "true"', () => {
       const config = loadDatabaseConfig({ ...ENV_MINIMO, DB_SSL: 'true' });
 
-      assert.deepEqual(config.ssl, { rejectUnauthorized: false });
+      assert.deepEqual(config.ssl, { rejectUnauthorized: true });
     });
 
     it('mantém SSL desabilitado para "false", ausente ou qualquer outro valor', () => {
