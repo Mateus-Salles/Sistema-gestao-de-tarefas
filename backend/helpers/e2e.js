@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
+import { passwordVersion } from '../src/utils/session.js';
 
 import database from '../src/database/index.js';
 import { hashPass } from '../src/utils/Password.js';
@@ -96,7 +97,7 @@ export function gerarToken(
   { expiresIn = '1h', secret = process.env.JWT_SECRET, jti = randomUUID() } = {}
 ) {
   return jwt.sign(
-    { sub: String(usuario.id_usuario), accessLevel: usuario.nivel_acesso },
+    { sub: String(usuario.id_usuario), accessLevel: usuario.nivel_acesso, passwordVersion: passwordVersion(usuario.senha_hash) },
     secret,
     { algorithm: 'HS256', expiresIn, jwtid: jti }
   );
@@ -127,7 +128,7 @@ export async function criarUsuario({ nome, email, nivel = 'colaborador', status 
   const [usuario] = await consultar(
     `INSERT INTO usuario (nome, email, senha_hash, nivel_acesso, status)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id_usuario, nome, email, nivel_acesso, status`,
+     RETURNING id_usuario, nome, email, nivel_acesso, status, senha_hash`,
     [nome ?? `Usuário ${n}`, email ?? `${n}@forge.test`, hash, nivel, status]
   );
 

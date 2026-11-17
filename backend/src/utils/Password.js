@@ -14,7 +14,7 @@ async function hashPass(password) {
 async function verifyPass(password, hashPassword) {
   const [salt, hash] = String(hashPassword).split(':');
 
-  if (!salt || !hash) return false;
+  if (!/^[a-f0-9]{32}$/.test(salt ?? '') || !/^[a-f0-9]{128}$/.test(hash ?? '')) return false;
 
   const expected = Buffer.from(hash, 'hex');
   if (expected.length === 0) return false;
