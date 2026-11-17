@@ -95,6 +95,9 @@
      },
      "401": {
       "$ref": "#/components/responses/NaoAutorizado"
+     },
+     "429": {
+      "description": "Limite de 30 tentativas de login por IP em 15 minutos. Sucessos não consomem o limite."
      }
     }
    }
@@ -149,7 +152,8 @@
      "401": {
       "$ref": "#/components/responses/NaoAutorizado"
      }
-    }
+    },
+    "description": "A troca de senha invalida todos os tokens existentes do usuário. Faça login novamente após a alteração."
    }
   },
   "/usuarios": {
@@ -447,6 +451,12 @@
      }
     ],
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
      "200": {
       "description": "Lista de clientes",
       "content": {
@@ -468,7 +478,8 @@
        }
       }
      }
-    }
+    },
+    "description": "Administrador consulta todos os clientes e contatos. Colaborador consulta apenas clientes dos projetos em que possui tarefas, com o campo contato omitido."
    },
    "post": {
     "tags": [
@@ -486,6 +497,12 @@
      }
     },
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
      "201": {
       "description": "Cliente criado",
       "content": {
@@ -514,6 +531,12 @@
     ],
     "summary": "Detalhe do cliente (RF06)",
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
      "200": {
       "description": "Dados do cliente",
       "content": {
@@ -526,8 +549,12 @@
      },
      "404": {
       "$ref": "#/components/responses/NaoEncontrado"
+     },
+     "403": {
+      "description": "Usuário sem vínculo com o recurso"
      }
-    }
+    },
+    "description": "Administrador consulta todos os clientes e contatos. Colaborador consulta apenas clientes dos projetos em que possui tarefas, com o campo contato omitido."
    },
    "patch": {
     "tags": [
@@ -545,6 +572,12 @@
      }
     },
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
      "200": {
       "description": "Cliente atualizado",
       "content": {
@@ -594,6 +627,15 @@
      }
     },
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     },
      "200": {
       "description": "Status atualizado",
       "content": {
@@ -629,8 +671,27 @@
         }
        }
       }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
      }
-    }
+    },
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "ativo",
+        "inativo",
+        "todos"
+       ],
+       "default": "ativo"
+      },
+      "description": "Por padrão, retorna apenas modelos disponíveis no catálogo."
+     }
+    ]
    },
    "post": {
     "tags": [
@@ -688,6 +749,9 @@
      },
      "404": {
       "$ref": "#/components/responses/NaoEncontrado"
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
      }
     }
    },
@@ -726,16 +790,13 @@
     "tags": [
      "Modelos de Lançamento"
     ],
-    "summary": "Exclui modelo de lançamento (RF13). A alteração/exclusão de um modelo não afeta projetos já criados a partir dele (RF14).\n",
+    "summary": "Retira o modelo do catálogo, alterando seu status para inativo e preservando tarefas padrão e projetos históricos.",
     "responses": {
      "204": {
-      "description": "Modelo excluído"
+      "description": "Modelo retirado do catálogo"
      },
      "403": {
       "$ref": "#/components/responses/ProibidoSomenteAdmin"
-     },
-     "409": {
-      "description": "Modelo em uso por projetos existentes e não pode ser excluído"
      }
     }
    }
@@ -764,6 +825,9 @@
         }
        }
       }
+     },
+     "403": {
+      "$ref": "#/components/responses/ProibidoSomenteAdmin"
      }
     }
    },
@@ -909,7 +973,8 @@
        }
       }
      }
-    }
+    },
+    "description": "Administrador consulta todos os projetos. Colaborador consulta apenas projetos em que possui tarefas atribuídas ou criadas por ele."
    },
    "post": {
     "tags": [
@@ -927,6 +992,15 @@
      }
     },
     "responses": {
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
+     "404": {
+      "$ref": "#/components/responses/NaoEncontrado"
+     },
      "201": {
       "description": "Projeto criado (com as tarefas padrão já geradas)",
       "content": {
@@ -941,7 +1015,7 @@
       "$ref": "#/components/responses/ProibidoSomenteAdmin"
      },
      "409": {
-      "description": "Cliente inativo — projeto não pode ser criado (RN05)"
+      "description": "Cliente inativo ou modelo retirado do catálogo"
      }
     }
    }
@@ -970,8 +1044,12 @@
      },
      "404": {
       "$ref": "#/components/responses/NaoEncontrado"
+     },
+     "403": {
+      "description": "Usuário sem vínculo com o recurso"
      }
-    }
+    },
+    "description": "Administrador consulta todos os projetos. Colaborador consulta apenas projetos em que possui tarefas atribuídas ou criadas por ele."
    },
    "patch": {
     "tags": [
@@ -1121,8 +1199,12 @@
         }
        }
       }
+     },
+     "403": {
+      "description": "Usuário sem vínculo com o recurso"
      }
-    }
+    },
+    "description": "Administrador consulta todos os projetos. Colaborador consulta apenas projetos em que possui tarefas atribuídas ou criadas por ele."
    }
   },
   "/tarefas": {
@@ -1212,7 +1294,8 @@
      "403": {
       "description": "Responsável informado não é de nível colaborador (RN03)"
      }
-    }
+    },
+    "description": "Colaborador pode criar tarefas avulsas ou em projetos em que já possui tarefas. Uma tarefa nova pendente reabre automaticamente um projeto concluído na mesma transação."
    }
   },
   "/tarefas/atrasadas": {
@@ -1293,8 +1376,12 @@
         }
        }
       }
+     },
+     "403": {
+      "description": "Usuário sem permissão de edição. O criador tem somente leitura quando outro colaborador é responsável."
      }
-    }
+    },
+    "description": "Administrador e responsável podem editar. O criador pode editar enquanto a tarefa estiver sem responsável ou atribuída a ele. Quando atribuída a outro colaborador, o criador mantém somente leitura."
    },
    "delete": {
     "tags": [
@@ -1403,7 +1490,8 @@
      "403": {
       "description": "Somente o responsável pela tarefa ou um administrador pode movê-la (RF24)"
      }
-    }
+    },
+    "description": "Reabrir uma tarefa reabre automaticamente seu projeto concluído. Projetos cancelados preservam seu status."
    }
   }
  },
@@ -1470,6 +1558,24 @@
    }
   },
   "responses": {
+   "DadosInvalidos": {
+    "description": "Dados da requisição inválidos",
+    "content": {
+     "application/json": {
+      "schema": {
+       "type": "object",
+       "required": [
+        "erro"
+       ],
+       "properties": {
+        "erro": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   },
    "NaoAutorizado": {
     "description": "Credenciais inválidas ou token ausente/expirado"
    },
@@ -1617,7 +1723,8 @@
       "type": "string"
      },
      "contato": {
-      "type": "string"
+      "type": "string",
+      "description": "Disponível somente para administradores."
      },
      "status": {
       "$ref": "#/components/schemas/StatusCliente"
