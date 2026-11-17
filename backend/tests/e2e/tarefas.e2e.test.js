@@ -344,6 +344,31 @@ describe('E2E · Tarefas', () => {
       esperar(await env.api.patch(`/tarefas/${t.id_tarefa}`, { titulo: 'Editada por mim' }, ctx.token.colabA), 200);
     });
 
+    it('criador mantém somente leitura quando o administrador atribui a tarefa a outro colaborador', async () => {
+      const criada = esperar(await env.api.post('/tarefas', {
+        titulo: 'Original', divisao: 'produto', responsavel_id: ctx.colabA.id_usuario,
+      }, ctx.token.colabA), 201);
+      const path = `/tarefas/${criada.id_tarefa}`;
+      esperar(await env.api.patch(`${path}/responsavel`, {
+        responsavel_id: ctx.colabB.id_usuario,
+      }, ctx.token.admin), 200);
+
+      esperar(await env.api.get(path, ctx.token.colabA), 200);
+      esperar(await env.api.patch(path, {
+        titulo: 'Tentativa', descricao: 'Tentativa', divisao: 'trafego', vencimento: '2099-01-01',
+      }, ctx.token.colabA), 403);
+      esperar(await env.api.patch(`${path}/status`, { kanban_status: 'concluido' }, ctx.token.colabA), 403);
+      esperar(await env.api.patch(`${path}/responsavel`, { responsavel_id: ctx.colabA.id_usuario }, ctx.token.colabA), 403);
+      esperar(await env.api.delete(path, ctx.token.colabA), 403);
+      assert.equal(esperar(await env.api.get(path, ctx.token.admin), 200).titulo, 'Original');
+
+      esperar(await env.api.patch(path, { titulo: 'Editada por B' }, ctx.token.colabB), 200);
+      esperar(await env.api.patch(`${path}/status`, { kanban_status: 'em_andamento' }, ctx.token.colabB), 200);
+      esperar(await env.api.patch(path, { titulo: 'Editada pelo administrador' }, ctx.token.admin), 200);
+      esperar(await env.api.patch(`${path}/responsavel`, { responsavel_id: ctx.colabA.id_usuario }, ctx.token.admin), 200);
+      esperar(await env.api.patch(path, { titulo: 'Responsável novamente' }, ctx.token.colabA), 200);
+    });
+
     it('200 · não troca responsável nem coluna por esta rota (existem rotas próprias)', async () => {
       const t = await criarTarefa({ responsavelId: ctx.colabA.id_usuario });
 
