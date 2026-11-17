@@ -119,19 +119,19 @@ describe('E2E · Projetos', () => {
 
       const criado = esperar(await env.api.post('/projetos', entrada, ctx.token.admin), 201);
 
-      const lista = esperar(await env.api.get(`/tarefas?projeto_id=${criado.id_projeto}`, ctx.token.admin), 200);
+      const lista = esperar(await env.api.get(`/projetos/${criado.id_projeto}/kanban`, ctx.token.admin), 200);
 
-      assert.equal(lista.dados.length, TAREFAS_DO_MODELO_PADRAO.length);
-      assert.deepEqual(lista.dados.map((t) => t.divisao).sort(), ['conteudo', 'disparos', 'produto', 'trafego']);
+      assert.equal(lista.length, TAREFAS_DO_MODELO_PADRAO.length);
+      assert.deepEqual(lista.map((t) => t.divisao).sort(), ['conteudo', 'disparos', 'produto', 'trafego']);
 
-      for (const t of lista.dados) {
+      for (const t of lista) {
         assert.equal(t.projeto_id, criado.id_projeto);
         assert.equal(t.kanban_status, 'a_fazer');
         assert.equal(t.responsavel_id, null);
         assert.equal(t.criador_id, ctx.admin.id_usuario);
       }
 
-      const titulos = lista.dados.map((t) => t.titulo).sort();
+      const titulos = lista.map((t) => t.titulo).sort();
       assert.deepEqual(titulos, TAREFAS_DO_MODELO_PADRAO.map((t) => t.titulo).sort());
     });
 
@@ -141,8 +141,8 @@ describe('E2E · Projetos', () => {
 
       const criado = esperar(await env.api.post('/projetos', entrada, ctx.token.admin), 201);
 
-      const lista = esperar(await env.api.get(`/tarefas?projeto_id=${criado.id_projeto}`, ctx.token.admin), 200);
-      assert.equal(lista.dados.length, 0);
+      const lista = esperar(await env.api.get(`/projetos/${criado.id_projeto}/kanban`, ctx.token.admin), 200);
+      assert.deepEqual(lista, []);
     });
 
     it('409 · RN05 — cliente inativo não pode receber projeto (e nada é criado)', async () => {
