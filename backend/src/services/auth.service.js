@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { passwordVersion } from '../utils/session.js';
 import { randomUUID } from 'node:crypto';
 
 import authModel from '../models/auth.model.js';
@@ -23,7 +24,7 @@ function getUserDTO(u) {
 function genToken(user) {
   const { secret, expiresIn } = getJwtConfig();
   return jwt.sign(
-    { sub: String(user.id_usuario), accessLevel: user.nivel_acesso },
+    { sub: String(user.id_usuario), accessLevel: user.nivel_acesso, passwordVersion: passwordVersion(user.senha_hash) },
     secret,
     { algorithm: 'HS256', expiresIn, jwtid: randomUUID() }
   );

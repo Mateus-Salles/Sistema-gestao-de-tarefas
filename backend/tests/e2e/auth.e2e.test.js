@@ -269,7 +269,7 @@ describe('E2E · Autenticação', () => {
     });
 
     it('401 · token de usuário que não existe mais', async () => {
-      const fantasma = gerarToken({ id_usuario: 999999, nivel_acesso: 'administrador' });
+      const fantasma = gerarToken({ id_usuario: 999999, nivel_acesso: 'administrador', senha_hash: 'hash-do-usuario-inexistente' });
 
       esperar(await env.api.get(rota, fantasma), 401);
     });

@@ -6,6 +6,17 @@ const forNum = (val, def) => {
 };
 
 function loadDatabaseConfig(env = process.env) {
+  if (env.DATABASE_URL) {
+    const url = new URL(env.DATABASE_URL);
+    const sslMode = url.searchParams.get('sslmode');
+    if (sslMode === 'no-verify' || url.searchParams.get('uselibpqcompat') === 'true') {
+      throw new Error('[Config] Use sslmode=verify-full para validar o certificado do banco');
+    }
+    if (env.DB_SSL === 'true' && (sslMode === 'disable' || url.searchParams.get('ssl') === '0')) {
+      throw new Error('[Config] DATABASE_URL não pode desabilitar DB_SSL');
+    }
+  }
+
   const config = {
     connectionString:         env.DATABASE_URL || undefined,
     host:                     env.DB_HOST || 'localhost',
@@ -18,7 +29,7 @@ function loadDatabaseConfig(env = process.env) {
     idleTimeoutMillis:        forNum(env.DB_IDLE_TIMEOUT, 30000),
     connectionTimeoutMillis:  forNum(env.DB_CONNECTION_TIMEOUT, 5000),
 
-    ssl: env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+    ssl: env.DB_SSL === 'true' ? { rejectUnauthorized: true, ...(env.DB_SSL_CA ? { ca: env.DB_SSL_CA } : {}) } : false
   }
 
   if (!config.connectionString) {
