@@ -69,7 +69,7 @@ describe('E2E · Clientes', () => {
 
       const body = esperar(await env.api.get('/clientes', ctx.token.colabA), 200);
 
-      assert.equal(body.dados.length, 1);
+      assert.equal(body.dados.length, 0);
     });
 
     it('401 · sem token', async () => {
@@ -230,6 +230,10 @@ describe('E2E · Clientes', () => {
       const c = await criarCliente();
 
       esperar(await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'inativa' }, ctx.token.colabA), 403);
+    });
+
+    it('404 · cliente inexistente', async () => {
+      esperar(await env.api.patch('/clientes/999999/status', { status: 'inativa' }, ctx.token.admin), 404);
     });
 
     it('401 · sem token', async () => {

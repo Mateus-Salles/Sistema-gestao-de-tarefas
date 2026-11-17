@@ -3,7 +3,8 @@ import { z } from 'zod';
 const MAX_PAGE_SIZE = 100;
 
 const idParamSchema = z.object({
-  id: z.coerce.number({ error: 'ID inválido' }).int('ID inválido').positive('ID inválido'),
+  id: z.coerce.number({ error: 'ID inválido' }).int('ID inválido').positive('ID inválido')
+    .max(2_147_483_647, 'ID fora do intervalo permitido'),
 });
 
 const paginationQuerySchema = z.object({

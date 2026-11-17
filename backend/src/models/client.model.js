@@ -4,7 +4,7 @@ import { AppError } from '../utils/AppError.js';
 const COLUMNS = 'id_cliente, nome, contato, status, criado_em';
 const UPDATABLE_FIELDS = ['nome', 'contato'];
 
-async function findAll({ status, limit, offset }) {
+async function findAll({ status, limit, offset, viewerId = null }) {
   try {
     const params = [];
     let where = '';
@@ -13,6 +13,12 @@ async function findAll({ status, limit, offset }) {
       params.push(status);
       where = `WHERE status = $${params.length}`;
     }
+
+    params.push(viewerId);
+    const access = `($${params.length}::int IS NULL OR EXISTS (
+      SELECT 1 FROM projeto p JOIN tarefa t ON t.projeto_id = p.id_projeto
+      WHERE p.cliente_id = cliente.id_cliente AND (t.responsavel_id = $${params.length} OR t.criador_id = $${params.length})))`;
+    where += where ? ` AND ${access}` : `WHERE ${access}`;
 
     const countResult = await database.query(`SELECT COUNT(*) AS total FROM cliente ${where};`, params);
 
@@ -23,7 +29,7 @@ async function findAll({ status, limit, offset }) {
       [...params, limit, offset]
     );
 
-    return { rows, total: countResult.rows[0].total };
+    return { rows, total: Number(countResult.rows[0].total) };
   } catch (err) {
     console.error('[client.model] findAll: ', err);
 
@@ -98,4 +104,13 @@ async function updateStatus(clientId, status) {
   }
 }
 
-export default { findAll, findById, create, update, updateStatus };
+async function hasProjects(clientId, userId) {
+  const { rows: [result] } = await database.query(
+    `SELECT EXISTS (SELECT 1 FROM projeto p JOIN tarefa t ON t.projeto_id = p.id_projeto
+     WHERE p.cliente_id = $1 AND (t.responsavel_id = $2 OR t.criador_id = $2)) AS allowed`,
+    [clientId, userId],
+  );
+  return result.allowed;
+}
+
+export default { hasProjects, findAll, findById, create, update, updateStatus };

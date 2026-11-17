@@ -2,9 +2,9 @@ import clientService from '../services/client.service.js';
 
 async function list(req, res, next) {
   try {
-    const { status, pagina, tamanho_pagina } = req.valid.query;
+    const { status, pagina, tamanho_pagina } = req.validatedQuery;
 
-    const result = await clientService.list({ status, page: pagina, pageSize: tamanho_pagina });
+    const result = await clientService.list({ status, page: pagina, pageSize: tamanho_pagina }, req.user);
 
     res.status(200).json(result);
   } catch (err) {
@@ -14,7 +14,7 @@ async function list(req, res, next) {
 
 async function getById(req, res, next) {
   try {
-    const client = await clientService.getById(req.valid.params.id);
+    const client = await clientService.getById(req.validatedParams.id, req.user);
 
     res.status(200).json(client);
   } catch (err) {
@@ -38,7 +38,7 @@ async function update(req, res, next) {
   try {
     const { nome, contato } = req.body;
 
-    const client = await clientService.update(req.valid.params.id, { nome, contato });
+    const client = await clientService.update(req.validatedParams.id, { nome, contato });
 
     res.status(200).json(client);
   } catch (err) {
@@ -48,7 +48,7 @@ async function update(req, res, next) {
 
 async function updateStatus(req, res, next) {
   try {
-    const client = await clientService.updateStatus(req.valid.params.id, req.body.status);
+    const client = await clientService.updateStatus(req.validatedParams.id, req.body.status);
 
     res.status(200).json(client);
   } catch (err) {
