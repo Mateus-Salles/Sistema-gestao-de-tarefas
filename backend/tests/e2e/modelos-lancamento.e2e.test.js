@@ -33,7 +33,7 @@ describe('E2E · Modelos de Lançamento', () => {
       const a = await criarModelo({ nome: 'Lançamento Semente' });
       const b = await criarModelo({ nome: 'Lançamento Perpétuo', status: 'inativo' });
 
-      const lista = esperar(await env.api.get('/modelos-lancamento', ctx.token.admin), 200);
+      const lista = esperar(await env.api.get('/modelos-lancamento?status=todos', ctx.token.admin), 200);
 
       assert.ok(Array.isArray(lista));
       assert.deepEqual(ids(lista, 'id_modelo_lancamento'), [a.id_modelo_lancamento, b.id_modelo_lancamento]);
@@ -169,26 +169,17 @@ describe('E2E · Modelos de Lançamento', () => {
 
   /* ---------------------------------------------------------------- */
   describe('DELETE /modelos-lancamento/{id} (RF13, RF14)', () => {
-    it('204 · exclui modelo sem uso (e as tarefas padrão dele somem junto)', async () => {
+    it('204 · retira modelo do catálogo e preserva tarefas padrão e projetos históricos', async () => {
       const modelo = await criarModelo({ tarefas: TAREFAS_DO_MODELO_PADRAO });
-      const id = modelo.id_modelo_lancamento;
+      const projeto = await criarProjeto({ modeloId: modelo.id_modelo_lancamento });
+      assert.equal((await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin)).status, 204);
 
-      const res = await env.api.delete(`/modelos-lancamento/${id}`, ctx.token.admin);
-      assert.equal(res.status, 204);
-
-      esperar(await env.api.get(`/modelos-lancamento/${id}`, ctx.token.admin), 404);
-
-      const orfas = await consultar('SELECT 1 FROM tarefa_padrao WHERE modelo_lancamento_id = $1', [id]);
-      assert.equal(orfas.length, 0);
-    });
-
-    it('409 · modelo em uso por projeto existente não pode ser excluído', async () => {
-      const modelo = await criarModelo({ tarefas: TAREFAS_DO_MODELO_PADRAO });
-      await criarProjeto({ modeloId: modelo.id_modelo_lancamento });
-
-      esperar(await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 409);
-
-      esperar(await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 200);
+      const detalhe = esperar(await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 200);
+      assert.equal(detalhe.status, 'inativo');
+      assert.equal(detalhe.tarefas_padrao.length, 4);
+      assert.deepEqual(esperar(await env.api.get('/modelos-lancamento', ctx.token.admin), 200), []);
+      const historico = esperar(await env.api.get(`/projetos/${projeto.id_projeto}`, ctx.token.admin), 200);
+      assert.equal(historico.modelo_lancamento_id, modelo.id_modelo_lancamento);
     });
 
     it('403 · colaborador não pode excluir modelo', async () => {
