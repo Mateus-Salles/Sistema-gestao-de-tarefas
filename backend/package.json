@@ -5,6 +5,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "start": "node src/server.js",
     "test": "npm run test:unit",
     "test:unit": "node --test \"tests/unit/**/*.test.js\"",
     "test:e2e": "node --env-file-if-exists=.env.test --test --test-concurrency=1 \"tests/e2e/**/*.test.js\"",
