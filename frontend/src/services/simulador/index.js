@@ -752,7 +752,7 @@ export async function simuladorAdapter(config) {
     const mensagem = e instanceof ErroApi ? e.message : "Erro interno do simulador";
     if (!(e instanceof ErroApi)) console.error("[simulador]", e);
 
-    const res = resposta(config, status, { message: mensagem });
+    const res = resposta(config, status, { erro: mensagem });
     throw new AxiosError(
       mensagem,
       status >= 500 ? AxiosError.ERR_BAD_RESPONSE : AxiosError.ERR_BAD_REQUEST,

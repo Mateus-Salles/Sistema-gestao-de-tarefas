@@ -6,9 +6,10 @@ import { simuladorAdapter } from "./simulador";
 // Endereço da API, já com o prefixo /v1. Configure em frontend/.env.
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/v1";
 
-// Enquanto o back-end não tem todas as rotas, o simulador responde no lugar.
-// Para usar o back-end real: VITE_USAR_SIMULADOR=false no frontend/.env.
-export const USANDO_SIMULADOR = import.meta.env.VITE_USAR_SIMULADOR !== "false";
+// O simulador responde no lugar da API, para desenvolver o front sem o back-end.
+// Só liga com VITE_USAR_SIMULADOR=true: sem a variável (ex.: no build de
+// produção) o front sempre usa a API real.
+export const USANDO_SIMULADOR = import.meta.env.VITE_USAR_SIMULADOR === "true";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -46,9 +47,11 @@ api.interceptors.response.use(
   }
 );
 
-// Mensagem amigável a partir de um erro da API (AppError/Zod) ou da rede.
+// Mensagem amigável a partir de um erro da API ou da rede.
+// A API responde os erros no formato { erro: "mensagem" }.
 export function mensagemDeErro(erro, padrao = "Algo deu errado. Tente novamente.") {
   return (
+    erro?.response?.data?.erro ||
     erro?.response?.data?.message ||
     erro?.response?.data?.error ||
     (erro?.request && !erro?.response ? "Não foi possível conectar ao servidor." : null) ||
@@ -57,13 +60,28 @@ export function mensagemDeErro(erro, padrao = "Algo deu errado. Tente novamente.
   );
 }
 
-// Listas paginadas vêm como { dados, paginacao }. Pedimos uma página grande
-// para as telas receberem tudo de uma vez.
-const TODOS = { tamanho_pagina: 1000 };
+// Listas paginadas vêm como { dados, paginacao }. A API aceita no máximo 100
+// itens por página, então buscamos página por página até ter tudo.
+const TAMANHO_PAGINA = 100;
 
 async function listar(caminho, filtros = {}) {
-  const { data } = await api.get(caminho, { params: { ...TODOS, ...filtros } });
-  return data.dados;
+  const itens = [];
+  let pagina = 1;
+
+  for (;;) {
+    const { data } = await api.get(caminho, {
+      params: { ...filtros, pagina, tamanho_pagina: TAMANHO_PAGINA }
+    });
+
+    itens.push(...data.dados);
+
+    const total = data.paginacao?.total ?? itens.length;
+    if (data.dados.length === 0 || itens.length >= total) {
+      return itens;
+    }
+
+    pagina += 1;
+  }
 }
 
 const pegarDados = (resposta) => resposta.data;
