@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { login, mensagemDeErro } from "../services/api";
 import { salvarSessao } from "../services/sessao";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
+  // Aviso vindo de outra tela (ex.: depois de trocar a senha).
+  const aviso = useLocation().state?.aviso;
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -72,10 +74,7 @@ function Login() {
             </div>
 
             <div className="form-group">
-              <div className="password-label">
-                <label htmlFor="senha">Senha</label>
-                <a href="#">Esqueceu a senha?</a>
-              </div>
+              <label htmlFor="senha">Senha</label>
 
               <input
                 type="password"
@@ -87,12 +86,13 @@ function Login() {
               />
             </div>
 
+            {aviso && !erro && <p className="login-aviso">{aviso}</p>}
             {erro && <p className="login-error">{erro}</p>}
 
             <button type="submit">Entrar</button>
 
-            <p className="cadastro-link">
-              Não tem uma conta? <Link to="/cadastro">Cadastre-se</Link>
+            <p className="login-ajuda">
+              Não tem acesso ou esqueceu a senha? Fale com um administrador.
             </p>
           </form>
         </div>

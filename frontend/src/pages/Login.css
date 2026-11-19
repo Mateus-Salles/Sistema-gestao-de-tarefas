@@ -112,23 +112,6 @@
   text-align: left;
 }
 
-.password-label {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.password-label label {
-  text-align: left;
-}
-
-.password-label a {
-  font-size: 13px;
-  color: #4b5563;
-  text-decoration: none;
-}
-
 .form-group input {
   width: 100%;
   box-sizing: border-box;
@@ -200,20 +183,29 @@
     padding: 50px 30px;
   }
 
-  .cadastro-link {
-    margin-top: 20px;
-    text-align: center;
-    font-size: 14px;
-    color: #64748b;
-  }
+}
 
-  .cadastro-link a {
-    color: #2563eb;
-    font-weight: 600;
-    text-decoration: none;
-  }
+.login-ajuda {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+}
 
-  .cadastro-link a:hover {
-    text-decoration: underline;
-  }
+.login-error,
+.login-aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.login-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.login-aviso {
+  background-color: #dcfce7;
+  color: #166534;
 }
