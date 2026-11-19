@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  iniciarAmbiente, esperar, criarCliente, criarModelo, criarProjeto,
+  iniciarAmbiente, esperar, consultar, criarCliente, criarModelo, criarProjeto,
   criarTarefa, concluirTodasAsTarefas, tarefasPorDivisao, TAREFAS_DO_MODELO_PADRAO,
 } from '../../helpers/e2e.js';
 
@@ -24,7 +24,7 @@ describe('Decisões do cliente', () => {
     esperar(await env.api.get(`/projetos/${outro.id_projeto}`, ctx.token.colabA), 403);
     esperar(await env.api.get(`/projetos/${outro.id_projeto}/progresso`, ctx.token.colabA), 403);
 
-    const clientes = esperar(await env.api.get('/clientes', ctx.token.colabA), 200);
+    const clientes = esperar(await env.api.get('/clientes?status=ativa', ctx.token.colabA), 200);
     assert.deepEqual(clientes.dados.map((c) => c.id_cliente), [cliente.id_cliente]);
     assert.equal(clientes.paginacao.total, 1);
     assert.equal('contato' in clientes.dados[0], false);
@@ -82,5 +82,33 @@ describe('Decisões do cliente', () => {
     assert.equal(esperar(await env.api.get(`/projetos/${projeto.id_projeto}`, ctx.token.admin), 200).status, 'concluido');
     esperar(await env.api.patch(`/tarefas/${id}/status`, { kanban_status: 'em_andamento' }, ctx.token.colabA), 200);
     assert.equal(esperar(await env.api.get(`/projetos/${projeto.id_projeto}`, ctx.token.admin), 200).status, 'andamento');
+  });
+
+  it('bloqueia a promoção de um colaborador até suas tarefas serem reatribuídas', async () => {
+    const responsavelId = ctx.colabA.id_usuario;
+    const tarefa = await criarTarefa({ responsavelId });
+    const usuario = `/usuarios/${responsavelId}`;
+    const promocao = { nivel_acesso: 'administrador' };
+
+    esperar(await env.api.patch(usuario, promocao, ctx.token.admin), 409);
+    await assert.rejects(
+      consultar("UPDATE usuario SET nivel_acesso = 'administrador' WHERE id_usuario = $1", [responsavelId]),
+      { code: '23514', constraint: 'chk_responsavel_colaborador' },
+    );
+
+    esperar(await env.api.patch(`/tarefas/${tarefa.id_tarefa}/responsavel`, {
+      responsavel_id: ctx.colabB.id_usuario,
+    }, ctx.token.admin), 200);
+    assert.equal(esperar(await env.api.patch(usuario, promocao, ctx.token.admin), 200).nivel_acesso, 'administrador');
+  });
+
+  it('reabre projeto concluído ao inserir uma tarefa diretamente no banco', async () => {
+    const modelo = await criarModelo();
+    const { id_projeto: id } = await criarProjeto({ modeloId: modelo.id_modelo_lancamento });
+    const projeto = `/projetos/${id}`;
+
+    esperar(await env.api.patch(`${projeto}/status`, { status: 'concluido' }, ctx.token.admin), 200);
+    await criarTarefa({ projetoId: id });
+    assert.equal(esperar(await env.api.get(projeto, ctx.token.admin), 200).status, 'andamento');
   });
 });
