@@ -5,7 +5,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 28px;
 }
@@ -154,4 +154,15 @@
   .project-progress {
     width: 100%;
   }
+}
+
+.stat-card strong.stat-alerta {
+  color: #dc2626;
+}
+
+.dashboard-atraso {
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
