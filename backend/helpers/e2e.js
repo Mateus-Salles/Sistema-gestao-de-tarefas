@@ -49,10 +49,19 @@ function garantirBancoDeTeste() {
 }
 
 async function garantirSchema() {
-  const { rows } = await database.query(`SELECT to_regclass('public.cliente') AS tabela`);
-  if (rows[0].tabela) return;
+  const { rows: [schema] } = await database.query(`
+    SELECT to_regclass('public.cliente') AS tabela,
+           to_regprocedure('public.fn_impede_promocao_com_tarefas()') AS integridade,
+           EXISTS (
+             SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = 'vw_tarefas_atrasadas' AND column_name = 'criador_id'
+           ) AS views_atualizadas
+  `);
+  if (schema.tabela && schema.integridade && schema.views_atualizadas) return;
 
-  for (const arquivo of ['01_tabelas_indices.sql', '02_funcoes_triggers.sql', '03_views.sql']) {
+  const arquivos = schema.tabela ? [] : ['01_tabelas_indices.sql'];
+  arquivos.push('02_funcoes_triggers.sql', '03_views.sql');
+  for (const arquivo of arquivos) {
     const sql = await readFile(new URL(`../src/database/${arquivo}`, import.meta.url), 'utf8');
     await database.query(sql);
   }

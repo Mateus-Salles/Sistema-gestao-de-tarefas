@@ -67,18 +67,19 @@ async function findAll({ status, limit, offset }) {
 
     const params = [];
     const filters = [];
+    const source = status === 'ativo' ? 'vw_usuarios_ativos' : 'usuario';
 
-    if (status) {
+    if (status && status !== 'ativo') {
       params.push(status);
       filters.push(`status = $${params.length}`);
     }
 
     const where = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
-    const countResult = await client.query(`SELECT COUNT(*) AS total FROM usuario ${where};`, params);
+    const countResult = await client.query(`SELECT COUNT(*) AS total FROM ${source} ${where};`, params);
 
     const { rows } = await client.query(
-      `SELECT ${COLUMNS} FROM usuario ${where} ORDER BY nome, id_usuario LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
+      `SELECT ${COLUMNS} FROM ${source} ${where} ORDER BY nome, id_usuario LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
       [...params, limit, offset]
     );
 
@@ -137,6 +138,10 @@ async function update(userId, fields) {
     return rows[0] || null;
   } catch(err) {
     if (err.code === PG_UNIQUE_VIOLATION) throw new AppError('E-mail já cadastrado', 409);
+
+    if (err.code === '23514' && err.constraint === 'chk_responsavel_colaborador') {
+      throw new AppError(err.message, 409);
+    }
 
     console.error('[user.model] update: ', err);
 

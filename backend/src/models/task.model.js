@@ -3,8 +3,8 @@ import { hasTasks } from './project.model.js';
 import { AppError } from '../utils/AppError.js';
 
 const OVERDUE = "COALESCE(vencimento < CURRENT_DATE AND kanban_status <> 'concluido', FALSE)";
-const COLUMNS = `id_tarefa, projeto_id, responsavel_id, criador_id, titulo, descricao, divisao,
-                 kanban_status, vencimento, ${OVERDUE} AS atrasada, criado_em, atualizado_em`;
+const TASK_FIELDS = 'id_tarefa, projeto_id, responsavel_id, criador_id, titulo, descricao, divisao, kanban_status, vencimento';
+const COLUMNS = `${TASK_FIELDS}, ${OVERDUE} AS atrasada, criado_em, atualizado_em`;
 const ORDER = 'ORDER BY vencimento NULLS LAST, id_tarefa';
 const UPDATABLE_FIELDS = ['titulo', 'descricao', 'divisao', 'vencimento', 'responsavel_id', 'kanban_status'];
 
@@ -28,8 +28,8 @@ async function findAll(viewerId, query) {
 
 async function findOverdue(viewerId) {
   const { rows } = await database.query(
-    `SELECT ${COLUMNS} FROM tarefa
-     WHERE ${OVERDUE} AND ($1::int IS NULL OR responsavel_id = $1 OR criador_id = $1)
+    `SELECT ${TASK_FIELDS}, TRUE AS atrasada, criado_em, atualizado_em FROM vw_tarefas_atrasadas
+     WHERE ($1::int IS NULL OR responsavel_id = $1 OR criador_id = $1)
      ${ORDER}`,
     [viewerId],
   );
@@ -40,7 +40,7 @@ async function findById(id, connection = database, lock = false) {
   if (lock) {
     // Usa a mesma ordem de bloqueio da conclusão do projeto.
     await connection.query(
-      'SELECT id_projeto FROM projeto WHERE id_projeto = (SELECT projeto_id FROM tarefa WHERE id_tarefa = $1) FOR UPDATE',
+      'SELECT id_projeto FROM projeto WHERE id_projeto = (SELECT projeto_id FROM tarefa WHERE id_tarefa = $1) FOR NO KEY UPDATE',
       [id],
     );
   }
@@ -67,7 +67,7 @@ async function create(userId, fields, collaborator = false) {
   try {
     return await database.transaction(async (client) => {
       if (projeto_id !== null) {
-        await client.query('SELECT id_projeto FROM projeto WHERE id_projeto = $1 FOR UPDATE', [projeto_id]);
+        await client.query('SELECT id_projeto FROM projeto WHERE id_projeto = $1 FOR NO KEY UPDATE', [projeto_id]);
       }
       if (collaborator && projeto_id !== null && !await hasTasks(projeto_id, userId, client)) {
         throw new AppError('Você precisa ter tarefas no projeto para criar outra tarefa nele', 403);
@@ -78,7 +78,6 @@ async function create(userId, fields, collaborator = false) {
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${COLUMNS}`,
         [projeto_id, responsavel_id, userId, titulo, descricao, divisao, vencimento],
       );
-      await reopenProject(client, task);
       return task;
     });
   } catch (err) {
@@ -96,7 +95,6 @@ async function update(client, id, fields) {
     `UPDATE tarefa SET ${assignments.join(', ')} WHERE id_tarefa = $1 RETURNING ${COLUMNS}`,
     [id, ...columns.map((field) => fields[field])],
   );
-  await reopenProject(client, task);
   return task;
 }
 
@@ -105,12 +103,6 @@ async function remove(userId, id) {
     const { rowCount } = await client.query('DELETE FROM tarefa WHERE id_tarefa = $1', [id]);
     return rowCount;
   });
-}
-
-async function reopenProject(client, task) {
-  if (task?.projeto_id != null && task.kanban_status !== 'concluido') {
-    await client.query("UPDATE projeto SET status = 'andamento' WHERE id_projeto = $1 AND status = 'concluido'", [task.projeto_id]);
-  }
 }
 
 export default { findAll, findOverdue, findById, requireAssignee, create, update, remove };

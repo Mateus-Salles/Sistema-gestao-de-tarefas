@@ -46,7 +46,10 @@ async function remove(id) {
 
 async function findTasks(id) {
   const { rows } = await database.query(
-    `SELECT ${TASK_COLUMNS} FROM tarefa_padrao WHERE modelo_lancamento_id = $1 ORDER BY id_tarefa_padrao`,
+    `SELECT id_tarefa_padrao, id_modelo_lancamento AS modelo_lancamento_id, tarefa_titulo AS titulo, divisao
+     FROM vw_modelos_com_tarefas_padrao
+     WHERE id_modelo_lancamento = $1 AND id_tarefa_padrao IS NOT NULL
+     ORDER BY id_tarefa_padrao`,
     [id],
   );
   return rows;
