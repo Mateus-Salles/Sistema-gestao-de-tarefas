@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { getClientes, criarCliente, atualizarCliente } from "../services/api"
+import { getClientes, criarCliente, atualizarCliente } from "../services/apiJsonServer"
+import Layout from "../components/Layout"
 import "./Clientes.css"
 
 function Clientes() {
@@ -113,7 +114,7 @@ function Clientes() {
     })
 
     return (
-        <div className="clientes-page">
+        <Layout titulo="Clientes" subtitulo="Clientes da agência e seus contatos.">
 
             <div className="clientes-content">
 
@@ -277,7 +278,7 @@ function Clientes() {
 
             </div>
 
-        </div>
+        </Layout>
     )
 }
 

@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
+import { passwordVersion } from '../utils/session.js';
 import { randomUUID } from 'node:crypto';
 
-import authModel from '../models/auth.model';
-import userModel from '../models/user.model';
-import { AppError } from '../utils/AppError';
-import { hashPass, verifyPass } from '../utils/Password';
-import { getJwtConfig } from '../configs/jwt.config';
+import authModel from '../models/auth.model.js';
+import userModel from '../models/user.model.js';
+import { AppError } from '../utils/AppError.js';
+import { hashPass, verifyPass } from '../utils/Password.js';
+import { getJwtConfig } from '../configs/jwt.config.js';
 
 const FAKE_HASH = hashPass('fake-password-to-match-time'); // Para não revelar quais e-mails estão cadastrados
 
@@ -23,7 +24,7 @@ function getUserDTO(u) {
 function genToken(user) {
   const { secret, expiresIn } = getJwtConfig();
   return jwt.sign(
-    { sub: String(user.id_usuario), accessLevel: user.nivel_acesso },
+    { sub: String(user.id_usuario), accessLevel: user.nivel_acesso, passwordVersion: passwordVersion(user.senha_hash) },
     secret,
     { algorithm: 'HS256', expiresIn, jwtid: randomUUID() }
   );
@@ -43,7 +44,7 @@ async function login(email, password) {
     throw new AppError('Usuário inativo. Procure um administrador.', 401);
   }
 
-  return { token: genToken(user), user: getUserDTO(user) };
+  return { token: genToken(user), usuario: getUserDTO(user) };
 }
 
 async function changePassword(userId, oldPassword, newPassword) {

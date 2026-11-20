@@ -6,38 +6,25 @@ import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Clientes from "./pages/Clientes";
 import Projetos from "./pages/Projetos";
+import RotaProtegida from "./components/RotaProtegida";
+import RotaPublica from "./components/RotaPublica";
 
 function App() {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-
-  const ehAdministrador = [
-    "administrador",
-    "admin",
-    "dono"
-  ].includes(tipoUsuario);
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/" element={<RotaPublica><Login /></RotaPublica>} />
+        <Route path="/cadastro" element={<RotaPublica><Cadastro /></RotaPublica>} />
 
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/tarefas" element={<Tasks />} />
-        <Route path="/projetos" element={<Projetos />} />
-
+        <Route path="/dashboard" element={<RotaProtegida><Dashboard /></RotaProtegida>} />
+        <Route path="/tarefas" element={<RotaProtegida><Tasks /></RotaProtegida>} />
+        <Route path="/projetos" element={<RotaProtegida><Projetos /></RotaProtegida>} />
         <Route
           path="/clientes"
-          element={
-            ehAdministrador ? (
-              <Clientes />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
-          }
+          element={<RotaProtegida somenteAdmin><Clientes /></RotaProtegida>}
         />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

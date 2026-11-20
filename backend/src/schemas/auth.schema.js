@@ -5,7 +5,7 @@ const SENHA_MIN = 8;
 const SENHA_MAX = 128;
 
 const loginSchema = z.object({
-  email: z.string().trim().regex(EMAIL_RE, 'E-mail inválido'),
+  email: z.string().trim().max(150).regex(EMAIL_RE, 'E-mail inválido'),
   senha: z.string().min(1, 'Senha é obrigatória').max(SENHA_MAX, 'Senha muito longa')
 });
 

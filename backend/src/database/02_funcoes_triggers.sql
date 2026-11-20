@@ -49,7 +49,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_restringe_cliente_admin
+CREATE OR REPLACE TRIGGER trg_restringe_cliente_admin
 BEFORE INSERT ON cliente
 FOR EACH ROW
 EXECUTE FUNCTION fn_restringe_cliente_admin();
@@ -63,7 +63,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_restringe_projeto_admin
+CREATE OR REPLACE TRIGGER trg_restringe_projeto_admin
 BEFORE INSERT ON projeto
 FOR EACH ROW
 EXECUTE FUNCTION fn_restringe_projeto_admin();
@@ -79,7 +79,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_valida_cliente_ativo_projeto
+CREATE OR REPLACE TRIGGER trg_valida_cliente_ativo_projeto
 BEFORE INSERT ON projeto
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_cliente_ativo_projeto();
@@ -108,7 +108,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_gerar_tarefas_padrao
+CREATE OR REPLACE TRIGGER trg_gerar_tarefas_padrao
 AFTER INSERT ON projeto
 FOR EACH ROW
 EXECUTE FUNCTION fn_gerar_tarefas_padrao();
@@ -122,7 +122,8 @@ BEGIN
     IF NEW.responsavel_id IS NOT NULL THEN
         SELECT nivel_acesso INTO v_nivel_responsavel
         FROM usuario
-        WHERE id_usuario = NEW.responsavel_id;
+        WHERE id_usuario = NEW.responsavel_id
+        FOR SHARE;
 
         IF v_nivel_responsavel <> 'colaborador' THEN
             RAISE EXCEPTION 'Uma tarefa só pode ter como responsável um usuário de nível colaborador';
@@ -132,7 +133,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_valida_responsavel_nivel
+CREATE OR REPLACE TRIGGER trg_valida_responsavel_nivel
 BEFORE INSERT OR UPDATE OF responsavel_id ON tarefa
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_responsavel_nivel();
@@ -154,7 +155,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_valida_movimentacao_kanban
+CREATE OR REPLACE TRIGGER trg_valida_movimentacao_kanban
 BEFORE UPDATE OF kanban_status ON tarefa
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_movimentacao_kanban();
@@ -168,7 +169,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_atualiza_timestamp_tarefa
+CREATE OR REPLACE TRIGGER trg_atualiza_timestamp_tarefa
 BEFORE UPDATE ON tarefa
 FOR EACH ROW
 EXECUTE FUNCTION fn_atualiza_timestamp_tarefa();
@@ -182,7 +183,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_restringe_exclusao_tarefa_admin
+CREATE OR REPLACE TRIGGER trg_restringe_exclusao_tarefa_admin
 BEFORE DELETE ON tarefa
 FOR EACH ROW
 EXECUTE FUNCTION fn_restringe_exclusao_tarefa_admin();
@@ -207,7 +208,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_valida_conclusao_projeto
+CREATE OR REPLACE TRIGGER trg_valida_conclusao_projeto
 BEFORE UPDATE OF status ON projeto
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_conclusao_projeto();
@@ -248,3 +249,44 @@ RETURNS TABLE (
        OR t.criador_id = p_usuario_id
     ORDER BY t.kanban_status, t.vencimento NULLS LAST;
 $$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION fn_impede_promocao_com_tarefas()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.nivel_acesso = 'colaborador' AND NEW.nivel_acesso = 'administrador' AND EXISTS (
+        SELECT 1 FROM tarefa WHERE responsavel_id = NEW.id_usuario
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_responsavel_colaborador',
+            MESSAGE = 'Reatribua as tarefas do colaborador antes de promovê-lo a administrador';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_impede_promocao_com_tarefas
+AFTER UPDATE OF nivel_acesso ON usuario
+FOR EACH ROW
+EXECUTE FUNCTION fn_impede_promocao_com_tarefas();
+
+CREATE OR REPLACE FUNCTION fn_reabre_projeto_com_tarefa_pendente()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.projeto_id IS NOT NULL AND NEW.kanban_status <> 'concluido' THEN
+        -- Serializa a reabertura com a conclusão, mesmo quando o projeto já está em andamento.
+        PERFORM 1 FROM projeto WHERE id_projeto = NEW.projeto_id FOR NO KEY UPDATE;
+
+        UPDATE projeto
+        SET status = 'andamento'
+        WHERE id_projeto = NEW.projeto_id AND status = 'concluido';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_reabre_projeto_com_tarefa_pendente
+AFTER INSERT OR UPDATE OF kanban_status, projeto_id ON tarefa
+FOR EACH ROW
+EXECUTE FUNCTION fn_reabre_projeto_com_tarefa_pendente();

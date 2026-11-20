@@ -3,7 +3,9 @@ import {
   getProjetos,
   criarProjeto,
   atualizarProjeto
-} from "../services/api";
+} from "../services/apiJsonServer";
+import { getUsuarioLogado, ehAdministrador as verificarAdmin } from "../utils/perfil";
+import Layout from "../components/Layout";
 import "./Projetos.css";
 
 function Projetos() {
@@ -18,14 +20,8 @@ function Projetos() {
   const [prazo, setPrazo] = useState("");
   const [progresso, setProgresso] = useState("0/0");
 
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-  const ehAdministrador = [
-    "administrador",
-    "admin",
-    "dono"
-  ].includes(tipoUsuario);
+  const usuario = getUsuarioLogado();
+  const ehAdministrador = verificarAdmin(usuario);
 
   async function carregarProjetos() {
     try {
@@ -118,7 +114,7 @@ function Projetos() {
   });
 
   return (
-    <div className="projetos-page">
+    <Layout titulo="Projetos" subtitulo="Lançamentos da agência e seu andamento.">
       <div className="projetos-content">
         <div className="projetos-filtros">
           <input
@@ -240,7 +236,7 @@ function Projetos() {
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

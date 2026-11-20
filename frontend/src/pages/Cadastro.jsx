@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { cadastrarUsuario } from "../services/api";
+import { mensagemDeErro } from "../services/api";
+import { cadastrarUsuario } from "../services/apiJsonServer";
 import "./Cadastro.css";
 
 function Cadastro() {
@@ -9,7 +10,6 @@ function Cadastro() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [tipoUsuario, setTipoUsuario] = useState("funcionario");
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
@@ -19,16 +19,12 @@ function Cadastro() {
     setSucesso("");
 
     try {
-      await cadastrarUsuario(nome, email, senha, tipoUsuario);
+      await cadastrarUsuario(nome, email, senha);
 
       setSucesso("Cadastro realizado! Redirecionando para o login...");
       setTimeout(() => navigate("/"), 1200);
     } catch (error) {
-      setErro(
-        error.response?.data?.message ||
-        error.message ||
-        "Não foi possível realizar o cadastro."
-      );
+      setErro(mensagemDeErro(error, "Não foi possível realizar o cadastro."));
     }
   }
 
@@ -101,18 +97,6 @@ function Cadastro() {
                 minLength={6}
                 required
               />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="tipoUsuario">Tipo de usuário</label>
-              <select
-                id="tipoUsuario"
-                value={tipoUsuario}
-                onChange={(e) => setTipoUsuario(e.target.value)}
-              >
-                <option value="funcionario">Funcionário</option>
-                <option value="admin">Administrador</option>
-              </select>
             </div>
 
             {erro && <p className="login-error">{erro}</p>}

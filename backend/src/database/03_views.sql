@@ -8,23 +8,23 @@
 -- ============================================================
 
 -- Clientes ativos (listagem e combo de criação de projeto)
-CREATE VIEW vw_clientes_ativos AS
-SELECT id_cliente, nome, contato, criado_em
+CREATE OR REPLACE VIEW vw_clientes_ativos AS
+SELECT id_cliente, nome, contato, criado_em, status
 FROM cliente
 WHERE status = 'ativa'
 ORDER BY nome;
 
 
 -- Colaboradores/usuários ativos (combo de atribuição de tarefas)
-CREATE VIEW vw_usuarios_ativos AS
-SELECT id_usuario, nome, email, nivel_acesso
+CREATE OR REPLACE VIEW vw_usuarios_ativos AS
+SELECT id_usuario, nome, email, nivel_acesso, status, criado_em
 FROM usuario
 WHERE status = 'ativo'
 ORDER BY nome;
 
 
 -- Modelos de lançamento com suas tarefas padrão
-CREATE VIEW vw_modelos_com_tarefas_padrao AS
+CREATE OR REPLACE VIEW vw_modelos_com_tarefas_padrao AS
 SELECT
     ml.id_modelo_lancamento,
     ml.nome        AS modelo_nome,
@@ -38,7 +38,7 @@ ORDER BY ml.nome, tp.divisao;
 
 
 -- Kanban completo do projeto (app filtra por projeto_id/divisao/responsavel_id)
-CREATE VIEW vw_kanban_projeto AS
+CREATE OR REPLACE VIEW vw_kanban_projeto AS
 SELECT
     t.id_tarefa,
     t.projeto_id,
@@ -63,27 +63,31 @@ JOIN usuario uc       ON uc.id_usuario = t.criador_id;
 
 
 -- Tarefas com prazo vencido, para destaque visual
-CREATE VIEW vw_tarefas_atrasadas AS
+CREATE OR REPLACE VIEW vw_tarefas_atrasadas AS
 SELECT
     t.id_tarefa,
     t.projeto_id,
-    p.nome        AS projeto_nome,
+    p.nome AS projeto_nome,
     t.titulo,
     t.divisao,
     t.kanban_status,
     t.vencimento,
     (CURRENT_DATE - t.vencimento) AS dias_atraso,
     t.responsavel_id,
-    u.nome        AS responsavel_nome
+    u.nome AS responsavel_nome,
+    t.criador_id,
+    t.descricao,
+    t.criado_em,
+    t.atualizado_em
 FROM tarefa t
-JOIN projeto p       ON p.id_projeto = t.projeto_id
+LEFT JOIN projeto p ON p.id_projeto = t.projeto_id
 LEFT JOIN usuario u ON u.id_usuario = t.responsavel_id
 WHERE t.vencimento < CURRENT_DATE
   AND t.kanban_status <> 'concluido';
 
 
 -- Progresso de tarefas por projeto (apoia a checagem de conclusão)
-CREATE VIEW vw_progresso_projeto AS
+CREATE OR REPLACE VIEW vw_progresso_projeto AS
 SELECT
     p.id_projeto,
     p.nome AS projeto_nome,

@@ -5,9 +5,12 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage",
-    "dev": "nodemon src/server.js"
+    "start": "node src/server.js",
+    "test": "npm run test:unit",
+    "test:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:e2e": "node --env-file-if-exists=.env.test --test --test-concurrency=1 \"tests/e2e/**/*.test.js\"",
+    "test:coverage": "node --test --experimental-test-coverage \"tests/unit/**/*.test.js\"",
+    "dev": "node --watch src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +21,10 @@
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "nodemon": "^3.1.14",
     "pg": "^8.23.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^8.2.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
