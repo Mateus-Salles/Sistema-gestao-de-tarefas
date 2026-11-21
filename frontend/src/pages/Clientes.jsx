@@ -1,285 +1,230 @@
-import { useEffect, useState } from "react"
-import { getClientes, criarCliente, atualizarCliente } from "../services/apiJsonServer"
-import Layout from "../components/Layout"
-import "./Clientes.css"
-
-function Clientes() {
-    const [clientes, setClientes] = useState([])
-    const [busca, setBusca] = useState("")
-    const [statusFiltro, setStatusFiltro] = useState("Todos")
-    const [mostrarFormulario, setMostrarFormulario] = useState(false)
-
-    const [nome, setNome] = useState("")
-    const [email, setEmail] = useState("")
-    const [telefone, setTelefone] = useState("")
-    const [projetos, setProjetos] = useState(0)
-
-    useEffect(() => {
-        carregarClientes()
-    }, [])
-
-    async function carregarClientes() {
-        const dados = await getClientes()
-        setClientes(dados)
-    }
-
-    async function adicionarCliente() {
-        if (!nome || !email) {
-            alert("Preencha o nome e o e-mail.")
-            return
-        }
-
-        const novoCliente = {
-            nome,
-            email,
-            telefone,
-            projetos: Number(projetos),
-            status: "Ativo"
-        }
-
-        const clienteCriado = await criarCliente(novoCliente)
-
-        setClientes([...clientes, clienteCriado])
-
-        setNome("")
-        setEmail("")
-        setTelefone("")
-        setProjetos(0)
-
-        setMostrarFormulario(false)
-    }
-
-    async function alterarStatus(cliente) {
-        const novoStatus =
-            cliente.status === "Ativo"
-                ? "Inativo"
-                : "Ativo"
-
-        const clienteAtualizado = await atualizarCliente(
-            cliente.id,
-            {
-                ...cliente,
-                status: novoStatus
-            }
-        )
-
-        setClientes(
-            clientes.map(item =>
-                item.id === cliente.id
-                    ? clienteAtualizado
-                    : item
-            )
-        )
-    }
-
-    function editarCliente(cliente) {
-        const novoNome = prompt(
-            "Nome do cliente:",
-            cliente.nome
-        )
-
-        if (!novoNome) {
-            return
-        }
-
-        atualizarCliente(cliente.id, {
-            ...cliente,
-            nome: novoNome
-        }).then(clienteAtualizado => {
-            setClientes(
-                clientes.map(item =>
-                    item.id === cliente.id
-                        ? clienteAtualizado
-                        : item
-                )
-            )
-        })
-    }
-
-    const clientesFiltrados = clientes.filter(cliente => {
-
-        const correspondeBusca =
-            cliente.nome
-                .toLowerCase()
-                .includes(busca.toLowerCase()) ||
-            cliente.email
-                .toLowerCase()
-                .includes(busca.toLowerCase())
-
-        const correspondeStatus =
-            statusFiltro === "Todos" ||
-            cliente.status === statusFiltro
-
-        return correspondeBusca && correspondeStatus
-    })
-
-    return (
-        <Layout titulo="Clientes" subtitulo="Clientes da agência e seus contatos.">
-
-            <div className="clientes-content">
-
-                <div className="clientes-filtros">
-
-                    <input
-                        type="text"
-                        placeholder="Buscar cliente..."
-                        value={busca}
-                        onChange={e => setBusca(e.target.value)}
-                    />
-
-                    <select
-                        value={statusFiltro}
-                        onChange={e => setStatusFiltro(e.target.value)}
-                    >
-                        <option value="Todos">
-                            Status: Todos
-                        </option>
-
-                        <option value="Ativo">
-                            Ativo
-                        </option>
-
-                        <option value="Inativo">
-                            Inativo
-                        </option>
-                    </select>
-
-                    <button
-                        className="novo-cliente-button"
-                        onClick={() => setMostrarFormulario(true)}
-                    >
-                        + Novo cliente
-                    </button>
-
-                </div>
-
-                {mostrarFormulario && (
-
-                    <div className="cliente-form">
-
-                        <h2>Novo cliente</h2>
-
-                        <input
-                            type="text"
-                            placeholder="Nome do cliente"
-                            value={nome}
-                            onChange={e => setNome(e.target.value)}
-                        />
-
-                        <input
-                            type="email"
-                            placeholder="E-mail"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Telefone"
-                            value={telefone}
-                            onChange={e => setTelefone(e.target.value)}
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Quantidade de projetos"
-                            value={projetos}
-                            onChange={e => setProjetos(e.target.value)}
-                        />
-
-                        <div className="cliente-form-buttons">
-
-                            <button
-                                onClick={adicionarCliente}
-                            >
-                                Salvar
-                            </button>
-
-                            <button
-                                onClick={() => setMostrarFormulario(false)}
-                            >
-                                Cancelar
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                )}
-
-                <div className="clientes-table">
-
-                    <div className="clientes-table-header">
-
-                        <span>Cliente</span>
-
-                        <span>Contato</span>
-
-                        <span>Projetos</span>
-
-                        <span>Status</span>
-
-                        <span>Ações</span>
-
-                    </div>
-
-                    {clientesFiltrados.map(cliente => (
-
-                        <div
-                            className="clientes-table-row"
-                            key={cliente.id}
-                        >
-
-                            <span>
-                                {cliente.nome}
-                            </span>
-
-                            <span>
-                                {cliente.email}
-                            </span>
-
-                            <span>
-                                {cliente.projetos}
-                            </span>
-
-                            <span>
-                                {cliente.status}
-                            </span>
-
-                            <span className="acoes">
-
-                                <button
-                                    onClick={() =>
-                                        editarCliente(cliente)
-                                    }
-                                >
-                                    Editar
-                                </button>
-
-                                <span>·</span>
-
-                                <button
-                                    onClick={() =>
-                                        alterarStatus(cliente)
-                                    }
-                                >
-                                    {cliente.status === "Ativo"
-                                        ? "Inativar"
-                                        : "Ativar"}
-                                </button>
-
-                            </span>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
-            </div>
-
-        </Layout>
-    )
+import { useEffect, useState } from "react";
+import {
+  listarClientes,
+  listarProjetos,
+  criarCliente,
+  editarCliente,
+  alterarStatusCliente,
+  mensagemDeErro
+} from "../services/api";
+import { STATUS_CLIENTE, rotulo } from "../utils/rotulos";
+import Layout from "../components/Layout";
+import "../components/Tela.css";
+
+const COLUNAS = { gridTemplateColumns: "2fr 2fr 0.8fr 0.8fr 1.2fr" };
+const FORM_VAZIO = { nome: "", contato: "" };
+
+// Busca os clientes e conta quantos projetos cada um tem.
+async function buscarDados() {
+  const [clientes, projetos] = await Promise.all([listarClientes(), listarProjetos()]);
+
+  const projetosPorCliente = {};
+  for (const projeto of projetos) {
+    projetosPorCliente[projeto.cliente_id] = (projetosPorCliente[projeto.cliente_id] || 0) + 1;
+  }
+
+  return { clientes, projetosPorCliente };
 }
 
-export default Clientes
+function Clientes() {
+  const [clientes, setClientes] = useState([]);
+  const [projetosPorCliente, setProjetosPorCliente] = useState({});
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+
+  const [busca, setBusca] = useState("");
+  const [statusFiltro, setStatusFiltro] = useState("");
+
+  // null = formulário fechado; { id: null } = novo; { id: 5 } = editando
+  const [formulario, setFormulario] = useState(null);
+  const [dados, setDados] = useState(FORM_VAZIO);
+  const [salvando, setSalvando] = useState(false);
+
+  // Incrementar a versão faz a lista ser buscada de novo.
+  const [versao, setVersao] = useState(0);
+  const recarregar = () => setVersao((v) => v + 1);
+
+  useEffect(() => {
+    let ativo = true;
+
+    buscarDados()
+      .then((r) => {
+        if (!ativo) return;
+        setClientes(r.clientes);
+        setProjetosPorCliente(r.projetosPorCliente);
+      })
+      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os clientes.")))
+      .finally(() => ativo && setCarregando(false));
+
+    return () => {
+      ativo = false;
+    };
+  }, [versao]);
+
+  function abrirNovo() {
+    setDados(FORM_VAZIO);
+    setFormulario({ id: null });
+  }
+
+  function abrirEdicao(cliente) {
+    setDados({ nome: cliente.nome, contato: cliente.contato });
+    setFormulario({ id: cliente.id_cliente });
+  }
+
+  async function salvar(e) {
+    e.preventDefault();
+    setErro("");
+    setSalvando(true);
+
+    const corpo = { nome: dados.nome.trim(), contato: dados.contato.trim() };
+
+    try {
+      if (formulario.id) {
+        await editarCliente(formulario.id, corpo);
+      } else {
+        await criarCliente(corpo);
+      }
+
+      setFormulario(null);
+      recarregar();
+    } catch (e) {
+      setErro(mensagemDeErro(e, "Não foi possível salvar o cliente."));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function alternarStatus(cliente) {
+    setErro("");
+    const novoStatus = cliente.status === "ativa" ? "inativa" : "ativa";
+
+    try {
+      await alterarStatusCliente(cliente.id_cliente, novoStatus);
+      recarregar();
+    } catch (e) {
+      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+    }
+  }
+
+  const termo = busca.trim().toLowerCase();
+  const clientesFiltrados = clientes.filter((cliente) => {
+    const correspondeBusca =
+      !termo ||
+      cliente.nome.toLowerCase().includes(termo) ||
+      (cliente.contato || "").toLowerCase().includes(termo);
+
+    const correspondeStatus = !statusFiltro || cliente.status === statusFiltro;
+
+    return correspondeBusca && correspondeStatus;
+  });
+
+  return (
+    <Layout titulo="Clientes" subtitulo="Clientes da agência e seus contatos.">
+      <div className="tela-conteudo">
+        <div className="tela-filtros">
+          <input
+            type="text"
+            placeholder="Buscar por nome ou contato..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+
+          <select
+            value={statusFiltro}
+            onChange={(e) => setStatusFiltro(e.target.value)}
+          >
+            <option value="">Status: Todos</option>
+            {STATUS_CLIENTE.map((s) => (
+              <option key={s.valor} value={s.valor}>
+                {s.rotulo}
+              </option>
+            ))}
+          </select>
+
+          <button className="botao-primario" onClick={abrirNovo}>
+            + Novo cliente
+          </button>
+        </div>
+
+        {erro && <p className="tela-erro">{erro}</p>}
+
+        {formulario && (
+          <form className="tela-form" onSubmit={salvar}>
+            <h2>{formulario.id ? "Editar cliente" : "Novo cliente"}</h2>
+
+            <label htmlFor="cliente-nome">Nome</label>
+            <input
+              id="cliente-nome"
+              type="text"
+              maxLength={150}
+              value={dados.nome}
+              onChange={(e) => setDados({ ...dados, nome: e.target.value })}
+              required
+            />
+
+            <label htmlFor="cliente-contato">Contato (e-mail, telefone ou responsável)</label>
+            <input
+              id="cliente-contato"
+              type="text"
+              maxLength={150}
+              value={dados.contato}
+              onChange={(e) => setDados({ ...dados, contato: e.target.value })}
+              required
+            />
+
+            <div className="tela-form-botoes">
+              <button type="submit" className="botao-primario" disabled={salvando}>
+                {salvando ? "Salvando..." : "Salvar"}
+              </button>
+              <button
+                type="button"
+                className="botao-secundario"
+                onClick={() => setFormulario(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="tela-tabela">
+          <div className="tela-tabela-cabecalho" style={COLUNAS}>
+            <span>Cliente</span>
+            <span>Contato</span>
+            <span>Projetos</span>
+            <span>Status</span>
+            <span>Ações</span>
+          </div>
+
+          {clientesFiltrados.map((cliente) => (
+            <div className="tela-tabela-linha" style={COLUNAS} key={cliente.id_cliente}>
+              <span>{cliente.nome}</span>
+              <span>{cliente.contato}</span>
+              <span>{projetosPorCliente[cliente.id_cliente] || 0}</span>
+              <span>
+                <span className={`selo ${cliente.status === "ativa" ? "verde" : "cinza"}`}>
+                  {rotulo(STATUS_CLIENTE, cliente.status)}
+                </span>
+              </span>
+              <span className="acoes">
+                <button onClick={() => abrirEdicao(cliente)}>Editar</button>
+                <span>·</span>
+                <button onClick={() => alternarStatus(cliente)}>
+                  {cliente.status === "ativa" ? "Inativar" : "Ativar"}
+                </button>
+              </span>
+            </div>
+          ))}
+
+          {carregando && <p className="tela-vazio">Carregando...</p>}
+
+          {!carregando && clientesFiltrados.length === 0 && (
+            <p className="tela-vazio">Nenhum cliente encontrado.</p>
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+export default Clientes;

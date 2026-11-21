@@ -9,9 +9,12 @@ import "./Layout.css";
 
 const ITENS_MENU = [
   { caminho: "/dashboard", rotulo: "Dashboard" },
-  { caminho: "/clientes", rotulo: "Clientes", somenteAdmin: true },
+  { caminho: "/tarefas", rotulo: "Kanban" },
   { caminho: "/projetos", rotulo: "Projetos" },
-  { caminho: "/tarefas", rotulo: "Kanban" }
+  { caminho: "/clientes", rotulo: "Clientes", somenteAdmin: true },
+  { caminho: "/modelos", rotulo: "Modelos de lançamento", somenteAdmin: true },
+  { caminho: "/usuarios", rotulo: "Usuários", somenteAdmin: true },
+  { caminho: "/senha", rotulo: "Alterar senha" }
 ];
 
 // Estrutura comum das telas internas: menu lateral, cabeçalho e conteúdo.
