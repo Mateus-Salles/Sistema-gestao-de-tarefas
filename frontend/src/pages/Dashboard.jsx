@@ -13,9 +13,6 @@ function Dashboard() {
   const [tarefas, setTarefas] = useState([]);
   const [projetos, setProjetos] = useState([]);
 
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-  const ehAdministrador = ["administrador", "admin", "dono"].includes(tipoUsuario);
-
   useEffect(() => {
     async function carregarDados() {
       try {
