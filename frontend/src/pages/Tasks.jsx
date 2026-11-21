@@ -164,7 +164,7 @@ function Tasks() {
       titulo: tarefa.titulo,
       descricao: tarefa.descricao || "",
       divisao: tarefa.divisao,
-      vencimento: tarefa.vencimento || "",
+      vencimento: tarefa.vencimento?.slice(0, 10) ?? "",
       projeto_id: tarefa.projeto_id ? String(tarefa.projeto_id) : "",
       responsavel_id: tarefa.responsavel_id ? String(tarefa.responsavel_id) : ""
     });
