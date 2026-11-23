@@ -1,106 +1,53 @@
-// Chamadas à API do sistema, seguindo o contrato em docs/openapi.json.
 import axios from "axios";
 import { getToken, limparSessao } from "./sessao";
-import { simuladorAdapter } from "./simulador";
-
-// Endereço da API, já com o prefixo /v1. Configure em frontend/.env.
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/v1";
-
-// O simulador responde no lugar da API, para desenvolver o front sem o back-end.
-// Só liga com VITE_USAR_SIMULADOR=true: sem a variável (ex.: no build de
-// produção) o front sempre usa a API real.
-export const USANDO_SIMULADOR = import.meta.env.VITE_USAR_SIMULADOR === "true";
 
 export const api = axios.create({
-  baseURL: API_URL,
-  ...(USANDO_SIMULADOR ? { adapter: simuladorAdapter } : {})
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/v1"
 });
 
-// Envia o token JWT em todas as requisições, quando houver.
 api.interceptors.request.use((config) => {
   const token = getToken();
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
-
-// Token ausente, expirado ou revogado: encerra a sessão e volta para o login.
-// Login (senha errada) e troca de senha (senha atual errada) também respondem
-// 401, mas nesses casos o usuário deve ver a mensagem, não ser deslogado.
-const ROTAS_401_ESPERADO = ["/auth/login", "/auth/senha"];
 
 api.interceptors.response.use(
   (resposta) => resposta,
   (erro) => {
-    const url = erro.config?.url || "";
-    const esperado = ROTAS_401_ESPERADO.some((rota) => url.includes(rota));
-
-    if (erro.response?.status === 401 && !esperado) {
+    if (erro.response?.status === 401 && !erro.config.url.includes("/auth/")) {
       limparSessao();
-      window.location.assign("/");
+      window.location.href = "/";
     }
-
     return Promise.reject(erro);
   }
 );
 
-// Mensagem amigável a partir de um erro da API ou da rede.
-// A API responde os erros no formato { erro: "mensagem" }.
-export function mensagemDeErro(erro, padrao = "Algo deu errado. Tente novamente.") {
-  return (
-    erro?.response?.data?.erro ||
-    erro?.response?.data?.message ||
-    erro?.response?.data?.error ||
-    (erro?.request && !erro?.response ? "Não foi possível conectar ao servidor." : null) ||
-    erro?.message ||
-    padrao
-  );
-}
-
-// Listas paginadas vêm como { dados, paginacao }. A API aceita no máximo 100
-// itens por página, então buscamos página por página até ter tudo.
-const TAMANHO_PAGINA = 100;
-
-async function listar(caminho, filtros = {}) {
-  const itens = [];
-  let pagina = 1;
-
-  for (;;) {
-    const { data } = await api.get(caminho, {
-      params: { ...filtros, pagina, tamanho_pagina: TAMANHO_PAGINA }
-    });
-
-    itens.push(...data.dados);
-
-    const total = data.paginacao?.total ?? itens.length;
-    if (data.dados.length === 0 || itens.length >= total) {
-      return itens;
-    }
-
-    pagina += 1;
+export function mensagemDeErro(erro) {
+  if (!erro.response) {
+    return "Não foi possível conectar ao servidor.";
   }
+  return erro.response.data?.erro || "Ocorreu um erro. Tente novamente.";
 }
 
-const pegarDados = (resposta) => resposta.data;
-
-// ---------- Autenticação ----------
-
-// Retorna { token, usuario }.
-export function login(email, senha) {
-  return api.post("/auth/login", { email: email.trim(), senha }).then(pegarDados);
+async function listar(caminho, filtros) {
+  const resposta = await api.get(caminho, {
+    params: { ...filtros, tamanho_pagina: 100 }
+  });
+  return resposta.data.dados;
 }
 
-// Avisa a API para revogar o token. Mesmo se falhar, a sessão local é encerrada.
+export async function login(email, senha) {
+  const resposta = await api.post("/auth/login", { email, senha });
+  return resposta.data;
+}
+
 export async function logout() {
   try {
-    if (getToken()) {
-      await api.post("/auth/logout");
-    }
+    await api.post("/auth/logout");
   } catch {
-    // Ignora: o usuário sai de qualquer forma.
+    return;
   } finally {
     limparSessao();
   }
@@ -110,74 +57,134 @@ export function alterarSenha(senha_atual, senha_nova) {
   return api.patch("/auth/senha", { senha_atual, senha_nova });
 }
 
-// ---------- Usuários ----------
+export function listarUsuarios() {
+  return listar("/usuarios");
+}
 
-export const listarUsuarios = (filtros) => listar("/usuarios", filtros);
-export const buscarMeuUsuario = () => api.get("/usuarios/me").then(pegarDados);
-export const buscarUsuario = (id) => api.get(`/usuarios/${id}`).then(pegarDados);
-export const criarUsuario = (dados) => api.post("/usuarios", dados).then(pegarDados);
-export const editarUsuario = (id, dados) => api.patch(`/usuarios/${id}`, dados).then(pegarDados);
-export const alterarStatusUsuario = (id, status) =>
-  api.patch(`/usuarios/${id}/status`, { status }).then(pegarDados);
+export function criarUsuario(dados) {
+  return api.post("/usuarios", dados);
+}
 
-// ---------- Clientes ----------
+export function editarUsuario(id, dados) {
+  return api.patch(`/usuarios/${id}`, dados);
+}
 
-export const listarClientes = (filtros) => listar("/clientes", filtros);
-export const buscarCliente = (id) => api.get(`/clientes/${id}`).then(pegarDados);
-export const criarCliente = (dados) => api.post("/clientes", dados).then(pegarDados);
-export const editarCliente = (id, dados) => api.patch(`/clientes/${id}`, dados).then(pegarDados);
-export const alterarStatusCliente = (id, status) =>
-  api.patch(`/clientes/${id}/status`, { status }).then(pegarDados);
+export function alterarStatusUsuario(id, status) {
+  return api.patch(`/usuarios/${id}/status`, { status });
+}
 
-// ---------- Modelos de lançamento ----------
+export function listarClientes() {
+  return listar("/clientes");
+}
 
-export const listarModelos = () => api.get("/modelos-lancamento").then(pegarDados);
-// Inclui tarefas_padrao.
-export const buscarModelo = (id) => api.get(`/modelos-lancamento/${id}`).then(pegarDados);
-export const criarModelo = (nome) => api.post("/modelos-lancamento", { nome }).then(pegarDados);
-export const editarModelo = (id, nome) =>
-  api.patch(`/modelos-lancamento/${id}`, { nome }).then(pegarDados);
-export const excluirModelo = (id) => api.delete(`/modelos-lancamento/${id}`);
+export function criarCliente(dados) {
+  return api.post("/clientes", dados);
+}
 
-export const criarTarefaPadrao = (modeloId, dados) =>
-  api.post(`/modelos-lancamento/${modeloId}/tarefas-padrao`, dados).then(pegarDados);
-export const editarTarefaPadrao = (modeloId, tarefaId, dados) =>
-  api.patch(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`, dados).then(pegarDados);
-export const excluirTarefaPadrao = (modeloId, tarefaId) =>
-  api.delete(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`);
+export function editarCliente(id, dados) {
+  return api.patch(`/clientes/${id}`, dados);
+}
 
-// ---------- Projetos ----------
+export function alterarStatusCliente(id, status) {
+  return api.patch(`/clientes/${id}/status`, { status });
+}
 
-export const listarProjetos = (filtros) => listar("/projetos", filtros);
-export const buscarProjeto = (id) => api.get(`/projetos/${id}`).then(pegarDados);
-// Ao criar, a API gera as tarefas do modelo escolhido.
-export const criarProjeto = (dados) => api.post("/projetos", dados).then(pegarDados);
-export const editarProjeto = (id, dados) => api.patch(`/projetos/${id}`, dados).then(pegarDados);
-export const alterarStatusProjeto = (id, status) =>
-  api.patch(`/projetos/${id}/status`, { status }).then(pegarDados);
-export const buscarProgressoProjeto = (id) =>
-  api.get(`/projetos/${id}/progresso`).then(pegarDados);
+export async function listarModelos() {
+  const resposta = await api.get("/modelos-lancamento");
+  return resposta.data;
+}
 
-// ---------- Tarefas ----------
+export async function buscarModelo(id) {
+  const resposta = await api.get(`/modelos-lancamento/${id}`);
+  return resposta.data;
+}
 
-// O próprio back-end aplica a visibilidade: colaborador recebe só as tarefas
-// atribuídas a ele ou criadas por ele (RN01, RN02).
-export const listarTarefas = (filtros) => listar("/tarefas", filtros);
-export const listarTarefasAtrasadas = () => api.get("/tarefas/atrasadas").then(pegarDados);
-export const buscarTarefa = (id) => api.get(`/tarefas/${id}`).then(pegarDados);
-export const criarTarefa = (dados) => api.post("/tarefas", dados).then(pegarDados);
-export const editarTarefa = (id, dados) => api.patch(`/tarefas/${id}`, dados).then(pegarDados);
-export const excluirTarefa = (id) => api.delete(`/tarefas/${id}`);
-export const atribuirResponsavel = (id, responsavel_id) =>
-  api.patch(`/tarefas/${id}/responsavel`, { responsavel_id }).then(pegarDados);
-export const moverTarefa = (id, kanban_status) =>
-  api.patch(`/tarefas/${id}/status`, { kanban_status }).then(pegarDados);
+export async function criarModelo(nome) {
+  const resposta = await api.post("/modelos-lancamento", { nome });
+  return resposta.data;
+}
 
-// ---------- Kanban ----------
+export function editarModelo(id, nome) {
+  return api.patch(`/modelos-lancamento/${id}`, { nome });
+}
 
-export const buscarKanbanProjeto = (id, filtros) =>
-  api.get(`/projetos/${id}/kanban`, { params: filtros }).then(pegarDados);
-export const buscarMeuKanban = (filtros) =>
-  api.get("/usuarios/me/kanban", { params: filtros }).then(pegarDados);
-export const buscarKanbanUsuario = (id, filtros) =>
-  api.get(`/usuarios/${id}/kanban`, { params: filtros }).then(pegarDados);
+export function excluirModelo(id) {
+  return api.delete(`/modelos-lancamento/${id}`);
+}
+
+export function criarTarefaPadrao(modeloId, dados) {
+  return api.post(`/modelos-lancamento/${modeloId}/tarefas-padrao`, dados);
+}
+
+export function editarTarefaPadrao(modeloId, tarefaId, dados) {
+  return api.patch(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`, dados);
+}
+
+export function excluirTarefaPadrao(modeloId, tarefaId) {
+  return api.delete(`/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`);
+}
+
+export function listarProjetos(filtros) {
+  return listar("/projetos", filtros);
+}
+
+export function criarProjeto(dados) {
+  return api.post("/projetos", dados);
+}
+
+export function editarProjeto(id, dados) {
+  return api.patch(`/projetos/${id}`, dados);
+}
+
+export function alterarStatusProjeto(id, status) {
+  return api.patch(`/projetos/${id}/status`, { status });
+}
+
+export async function buscarProgressoProjeto(id) {
+  const resposta = await api.get(`/projetos/${id}/progresso`);
+  return resposta.data;
+}
+
+export function listarTarefas() {
+  return listar("/tarefas");
+}
+
+export async function listarTarefasAtrasadas() {
+  const resposta = await api.get("/tarefas/atrasadas");
+  return resposta.data;
+}
+
+export function criarTarefa(dados) {
+  return api.post("/tarefas", dados);
+}
+
+export function editarTarefa(id, dados) {
+  return api.patch(`/tarefas/${id}`, dados);
+}
+
+export function excluirTarefa(id) {
+  return api.delete(`/tarefas/${id}`);
+}
+
+export function atribuirResponsavel(id, responsavel_id) {
+  return api.patch(`/tarefas/${id}/responsavel`, { responsavel_id });
+}
+
+export function moverTarefa(id, kanban_status) {
+  return api.patch(`/tarefas/${id}/status`, { kanban_status });
+}
+
+export async function buscarKanbanProjeto(id) {
+  const resposta = await api.get(`/projetos/${id}/kanban`);
+  return resposta.data;
+}
+
+export async function buscarKanbanUsuario(id) {
+  const resposta = await api.get(`/usuarios/${id}/kanban`);
+  return resposta.data;
+}
+
+export async function buscarMeuKanban() {
+  const resposta = await api.get("/usuarios/me/kanban");
+  return resposta.data;
+}

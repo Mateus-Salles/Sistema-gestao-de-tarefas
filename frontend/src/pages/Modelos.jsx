@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, Button, Modal, Form, Badge, Alert, Row, Col, Card, ListGroup } from "react-bootstrap";
 import {
   listarModelos,
   buscarModelo,
@@ -12,348 +13,299 @@ import {
 } from "../services/api";
 import { DIVISOES, formatarData } from "../utils/rotulos";
 import Layout from "../components/Layout";
-import "../components/Tela.css";
-import "./Modelos.css";
-
-const COLUNAS_MODELOS = { gridTemplateColumns: "1.7fr 0.9fr 1.9fr" };
-const TAREFA_VAZIA = { titulo: "", divisao: "produto" };
 
 function Modelos() {
   const [modelos, setModelos] = useState([]);
-  const [carregando, setCarregando] = useState(true);
+  const [modeloAberto, setModeloAberto] = useState(null);
   const [erro, setErro] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
 
-  // Formulário do modelo: null = fechado; { id: null } = novo; { id: 2 } = editando
-  const [formModelo, setFormModelo] = useState(null);
+  const [mostrarModalModelo, setMostrarModalModelo] = useState(false);
+  const [idModeloEditando, setIdModeloEditando] = useState(null);
   const [nomeModelo, setNomeModelo] = useState("");
 
-  // Modelo aberto, com as tarefas padrão
-  const [selecionado, setSelecionado] = useState(null);
-
-  // Formulário de tarefa padrão: null = fechado; { id: null } = nova; { id: 9 } = editando
-  const [formTarefa, setFormTarefa] = useState(null);
-  const [tarefa, setTarefa] = useState(TAREFA_VAZIA);
-
-  const [salvando, setSalvando] = useState(false);
-
-  // Incrementar a versão faz a lista de modelos ser buscada de novo.
-  const [versao, setVersao] = useState(0);
-  const recarregarModelos = () => setVersao((v) => v + 1);
+  const [mostrarModalTarefa, setMostrarModalTarefa] = useState(false);
+  const [idTarefaEditando, setIdTarefaEditando] = useState(null);
+  const [tituloTarefa, setTituloTarefa] = useState("");
+  const [divisaoTarefa, setDivisaoTarefa] = useState("produto");
 
   useEffect(() => {
-    let ativo = true;
-
-    listarModelos()
-      .then((lista) => ativo && setModelos(lista))
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os modelos.")))
-      .finally(() => ativo && setCarregando(false));
-
-    return () => {
-      ativo = false;
-    };
-  }, [versao]);
+    async function carregar() {
+      try {
+        setModelos(await listarModelos());
+      } catch (error) {
+        setErro(mensagemDeErro(error));
+      }
+    }
+    carregar();
+  }, [atualizar]);
 
   async function abrirModelo(id) {
     setErro("");
-    setFormTarefa(null);
-
     try {
-      setSelecionado(await buscarModelo(id));
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível abrir o modelo."));
+      setModeloAberto(await buscarModelo(id));
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  // ---------- Modelo ----------
-
   function novoModelo() {
-    setErro("");
+    setIdModeloEditando(null);
     setNomeModelo("");
-    setFormModelo({ id: null });
+    setMostrarModalModelo(true);
   }
 
-  function editarNomeModelo(modelo) {
-    setErro("");
+  function renomearModelo(modelo) {
+    setIdModeloEditando(modelo.id_modelo_lancamento);
     setNomeModelo(modelo.nome);
-    setFormModelo({ id: modelo.id_modelo_lancamento });
+    setMostrarModalModelo(true);
   }
 
   async function salvarModelo(e) {
     e.preventDefault();
     setErro("");
-    setSalvando(true);
 
     try {
-      if (formModelo.id) {
-        await editarModelo(formModelo.id, nomeModelo.trim());
-        if (selecionado?.id_modelo_lancamento === formModelo.id) {
-          await abrirModelo(formModelo.id);
+      if (idModeloEditando) {
+        await editarModelo(idModeloEditando, nomeModelo);
+        if (modeloAberto?.id_modelo_lancamento === idModeloEditando) {
+          await abrirModelo(idModeloEditando);
         }
       } else {
-        const criado = await criarModelo(nomeModelo.trim());
+        const criado = await criarModelo(nomeModelo);
         await abrirModelo(criado.id_modelo_lancamento);
       }
-
-      setFormModelo(null);
-      recarregarModelos();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o modelo."));
-    } finally {
-      setSalvando(false);
+      setMostrarModalModelo(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
   async function arquivarModelo(modelo) {
-    const confirmado = window.confirm(
-      `Arquivar o modelo "${modelo.nome}"? Ele deixa de aparecer na criação de ` +
-      "projetos. Os projetos já criados com ele não são alterados."
-    );
-    if (!confirmado) return;
-
+    if (!window.confirm(`Arquivar o modelo "${modelo.nome}"?`)) return;
     setErro("");
 
     try {
       await excluirModelo(modelo.id_modelo_lancamento);
-      if (selecionado?.id_modelo_lancamento === modelo.id_modelo_lancamento) {
-        setSelecionado(null);
+      if (modeloAberto?.id_modelo_lancamento === modelo.id_modelo_lancamento) {
+        setModeloAberto(null);
       }
-      recarregarModelos();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível arquivar o modelo."));
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  // ---------- Tarefas padrão ----------
-
-  function novaTarefa(divisao = "produto") {
-    setErro("");
-    setTarefa({ ...TAREFA_VAZIA, divisao });
-    setFormTarefa({ id: null });
+  function novaTarefa(divisao) {
+    setIdTarefaEditando(null);
+    setTituloTarefa("");
+    setDivisaoTarefa(divisao);
+    setMostrarModalTarefa(true);
   }
 
-  function editarTarefa(t) {
-    setErro("");
-    setTarefa({ titulo: t.titulo, divisao: t.divisao });
-    setFormTarefa({ id: t.id_tarefa_padrao });
+  function abrirEdicaoTarefa(tarefa) {
+    setIdTarefaEditando(tarefa.id_tarefa_padrao);
+    setTituloTarefa(tarefa.titulo);
+    setDivisaoTarefa(tarefa.divisao);
+    setMostrarModalTarefa(true);
   }
 
   async function salvarTarefa(e) {
     e.preventDefault();
     setErro("");
-    setSalvando(true);
 
-    const modeloId = selecionado.id_modelo_lancamento;
-    const corpo = { titulo: tarefa.titulo.trim(), divisao: tarefa.divisao };
+    const idModelo = modeloAberto.id_modelo_lancamento;
+    const dados = { titulo: tituloTarefa, divisao: divisaoTarefa };
 
     try {
-      if (formTarefa.id) {
-        await editarTarefaPadrao(modeloId, formTarefa.id, corpo);
+      if (idTarefaEditando) {
+        await editarTarefaPadrao(idModelo, idTarefaEditando, dados);
       } else {
-        await criarTarefaPadrao(modeloId, corpo);
+        await criarTarefaPadrao(idModelo, dados);
       }
-
-      setFormTarefa(null);
-      await abrirModelo(modeloId);
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar a tarefa padrão."));
-    } finally {
-      setSalvando(false);
+      setMostrarModalTarefa(false);
+      await abrirModelo(idModelo);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  async function removerTarefa(t) {
-    if (!window.confirm(`Remover a tarefa padrão "${t.titulo}"?`)) return;
-
+  async function removerTarefa(tarefa) {
+    if (!window.confirm(`Remover a tarefa "${tarefa.titulo}"?`)) return;
     setErro("");
 
     try {
-      await excluirTarefaPadrao(selecionado.id_modelo_lancamento, t.id_tarefa_padrao);
-      await abrirModelo(selecionado.id_modelo_lancamento);
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível remover a tarefa padrão."));
+      await excluirTarefaPadrao(modeloAberto.id_modelo_lancamento, tarefa.id_tarefa_padrao);
+      await abrirModelo(modeloAberto.id_modelo_lancamento);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  const tarefasPadrao = selecionado?.tarefas_padrao || [];
+  const tarefasPadrao = modeloAberto ? modeloAberto.tarefas_padrao : [];
 
   return (
-    <Layout
-      titulo="Modelos de lançamento"
-      subtitulo="Tarefas padrão criadas automaticamente em cada novo projeto."
-    >
-      <div className="tela-conteudo">
-        <div className="tela-filtros">
-          <button className="botao-primario" onClick={novoModelo}>
-            + Novo modelo
-          </button>
-        </div>
+    <Layout titulo="Modelos de lançamento">
+      {erro && <Alert variant="danger">{erro}</Alert>}
 
-        {erro && <p className="tela-erro">{erro}</p>}
+      <div className="mb-3 text-end">
+        <Button onClick={novoModelo}>Novo modelo</Button>
+      </div>
 
-        {formModelo && (
-          <form className="tela-form" onSubmit={salvarModelo}>
-            <h2>{formModelo.id ? "Renomear modelo" : "Novo modelo"}</h2>
+      <Row className="g-3">
+        <Col xl={5}>
+          <Table bordered hover responsive className="bg-white">
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th>Criado em</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelos.map((modelo) => (
+                <tr
+                  key={modelo.id_modelo_lancamento}
+                  className={modeloAberto?.id_modelo_lancamento === modelo.id_modelo_lancamento ? "table-primary" : ""}
+                >
+                  <td>{modelo.nome}</td>
+                  <td>{formatarData(modelo.criado_em)}</td>
+                  <td className="text-nowrap">
+                    <Button size="sm" variant="outline-dark" className="me-1" onClick={() => abrirModelo(modelo.id_modelo_lancamento)}>
+                      Tarefas
+                    </Button>
+                    <Button size="sm" variant="outline-primary" className="me-1" onClick={() => renomearModelo(modelo)}>
+                      Renomear
+                    </Button>
+                    <Button size="sm" variant="outline-danger" onClick={() => arquivarModelo(modelo)}>
+                      Arquivar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {modelos.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-center text-muted">
+                    Nenhum modelo cadastrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </Col>
 
-            <label htmlFor="modelo-nome">Nome do modelo</label>
-            <input
-              id="modelo-nome"
-              type="text"
-              maxLength={150}
-              placeholder="Ex.: Lançamento semente"
-              value={nomeModelo}
-              onChange={(e) => setNomeModelo(e.target.value)}
-              required
-            />
-
-            <div className="tela-form-botoes">
-              <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormModelo(null)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="modelos-grade">
-          <div className="tela-tabela">
-            <div className="tela-tabela-cabecalho" style={COLUNAS_MODELOS}>
-              <span>Modelo</span>
-              <span>Criado em</span>
-              <span>Ações</span>
-            </div>
-
-            {modelos.map((m) => (
-              <div
-                key={m.id_modelo_lancamento}
-                className={
-                  selecionado?.id_modelo_lancamento === m.id_modelo_lancamento
-                    ? "tela-tabela-linha selecionada"
-                    : "tela-tabela-linha"
-                }
-                style={COLUNAS_MODELOS}
-              >
-                <span>{m.nome}</span>
-                <span>{formatarData(m.criado_em)}</span>
-                <span className="acoes">
-                  <button onClick={() => abrirModelo(m.id_modelo_lancamento)}>
-                    Tarefas
-                  </button>
-                  <span>·</span>
-                  <button onClick={() => editarNomeModelo(m)}>Renomear</button>
-                  <span>·</span>
-                  <button className="perigo" onClick={() => arquivarModelo(m)}>
-                    Arquivar
-                  </button>
-                </span>
-              </div>
-            ))}
-
-            {carregando && <p className="tela-vazio">Carregando...</p>}
-
-            {!carregando && modelos.length === 0 && (
-              <p className="tela-vazio">
-                Nenhum modelo cadastrado. Crie um para poder criar projetos.
-              </p>
-            )}
-          </div>
-
-          <div className="modelo-detalhe">
-            {!selecionado ? (
-              <p className="tela-vazio">
-                Clique em “Tarefas” para ver e editar as tarefas padrão de um modelo.
-              </p>
-            ) : (
-              <>
-                <div className="modelo-detalhe-topo">
-                  <div>
-                    <h2>{selecionado.nome}</h2>
-                    <p>{tarefasPadrao.length} tarefa(s) padrão</p>
-                  </div>
-                  <button className="botao-primario" onClick={() => novaTarefa()}>
-                    + Tarefa padrão
-                  </button>
-                </div>
-
-                {formTarefa && (
-                  <form className="tela-form modelo-form-tarefa" onSubmit={salvarTarefa}>
-                    <label htmlFor="tarefa-titulo">Título</label>
-                    <input
-                      id="tarefa-titulo"
-                      type="text"
-                      maxLength={150}
-                      value={tarefa.titulo}
-                      onChange={(e) => setTarefa({ ...tarefa, titulo: e.target.value })}
-                      required
-                    />
-
-                    <label htmlFor="tarefa-divisao">Divisão</label>
-                    <select
-                      id="tarefa-divisao"
-                      value={tarefa.divisao}
-                      onChange={(e) => setTarefa({ ...tarefa, divisao: e.target.value })}
-                    >
-                      {DIVISOES.map((d) => (
-                        <option key={d.valor} value={d.valor}>
-                          {d.rotulo}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="tela-form-botoes">
-                      <button type="submit" className="botao-primario" disabled={salvando}>
-                        {formTarefa.id ? "Salvar" : "Adicionar"}
-                      </button>
-                      <button
-                        type="button"
-                        className="botao-secundario"
-                        onClick={() => setFormTarefa(null)}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </form>
-                )}
-
+        <Col xl={7}>
+          {!modeloAberto ? (
+            <Card body className="text-muted">
+              Clique em "Tarefas" para ver as tarefas padrão de um modelo.
+            </Card>
+          ) : (
+            <Card>
+              <Card.Header>
+                <strong>{modeloAberto.nome}</strong> - {tarefasPadrao.length} tarefa(s) padrão
+              </Card.Header>
+              <Card.Body>
                 {DIVISOES.map((divisao) => {
-                  const daDivisao = tarefasPadrao.filter((t) => t.divisao === divisao.valor);
+                  const tarefasDaDivisao = tarefasPadrao.filter((t) => t.divisao === divisao.valor);
 
                   return (
-                    <div className="modelo-divisao" key={divisao.valor}>
-                      <div className="modelo-divisao-titulo">
-                        <span className={`tag ${divisao.valor}`}>{divisao.rotulo}</span>
-                        <button onClick={() => novaTarefa(divisao.valor)}>+ adicionar</button>
+                    <div key={divisao.valor} className="mb-4">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <Badge bg={divisao.cor}>{divisao.rotulo}</Badge>
+                        <Button size="sm" variant="link" onClick={() => novaTarefa(divisao.valor)}>
+                          + Adicionar
+                        </Button>
                       </div>
-
-                      {daDivisao.map((t) => (
-                        <div className="modelo-tarefa" key={t.id_tarefa_padrao}>
-                          <span>{t.titulo}</span>
-                          <span className="acoes">
-                            <button onClick={() => editarTarefa(t)}>Editar</button>
-                            <span>·</span>
-                            <button className="perigo" onClick={() => removerTarefa(t)}>
-                              Remover
-                            </button>
-                          </span>
-                        </div>
-                      ))}
-
-                      {daDivisao.length === 0 && (
-                        <p className="modelo-divisao-vazia">Nenhuma tarefa nesta divisão.</p>
-                      )}
+                      <ListGroup>
+                        {tarefasDaDivisao.map((tarefa) => (
+                          <ListGroup.Item
+                            key={tarefa.id_tarefa_padrao}
+                            className="d-flex justify-content-between align-items-center"
+                          >
+                            {tarefa.titulo}
+                            <span className="text-nowrap">
+                              <Button size="sm" variant="outline-primary" className="me-1" onClick={() => abrirEdicaoTarefa(tarefa)}>
+                                Editar
+                              </Button>
+                              <Button size="sm" variant="outline-danger" onClick={() => removerTarefa(tarefa)}>
+                                Remover
+                              </Button>
+                            </span>
+                          </ListGroup.Item>
+                        ))}
+                        {tarefasDaDivisao.length === 0 && (
+                          <ListGroup.Item className="text-muted">Nenhuma tarefa.</ListGroup.Item>
+                        )}
+                      </ListGroup>
                     </div>
                   );
                 })}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+              </Card.Body>
+            </Card>
+          )}
+        </Col>
+      </Row>
+
+      <Modal show={mostrarModalModelo} onHide={() => setMostrarModalModelo(false)}>
+        <Form onSubmit={salvarModelo}>
+          <Modal.Header closeButton>
+            <Modal.Title>{idModeloEditando ? "Renomear modelo" : "Novo modelo"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group>
+              <Form.Label>Nome do modelo</Form.Label>
+              <Form.Control
+                maxLength={150}
+                value={nomeModelo}
+                onChange={(e) => setNomeModelo(e.target.value)}
+                required
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setMostrarModalModelo(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      <Modal show={mostrarModalTarefa} onHide={() => setMostrarModalTarefa(false)}>
+        <Form onSubmit={salvarTarefa}>
+          <Modal.Header closeButton>
+            <Modal.Title>{idTarefaEditando ? "Editar tarefa padrão" : "Nova tarefa padrão"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Título</Form.Label>
+              <Form.Control
+                maxLength={150}
+                value={tituloTarefa}
+                onChange={(e) => setTituloTarefa(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Divisão</Form.Label>
+              <Form.Select value={divisaoTarefa} onChange={(e) => setDivisaoTarefa(e.target.value)}>
+                {DIVISOES.map((d) => (
+                  <option key={d.valor} value={d.valor}>
+                    {d.rotulo}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setMostrarModalTarefa(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Layout>
   );
 }

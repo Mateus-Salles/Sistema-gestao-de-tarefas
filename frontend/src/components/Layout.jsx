@@ -1,77 +1,53 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  getUsuarioLogado,
-  ehAdministrador,
-  nomeDoNivel
-} from "../utils/perfil";
+import { Container, Nav, Navbar, Button } from "react-bootstrap";
+import { getUsuarioLogado, ehAdministrador } from "../services/sessao";
 import { logout } from "../services/api";
-import "./Layout.css";
 
-const ITENS_MENU = [
-  { caminho: "/dashboard", rotulo: "Dashboard" },
-  { caminho: "/tarefas", rotulo: "Kanban" },
-  { caminho: "/projetos", rotulo: "Projetos" },
-  { caminho: "/clientes", rotulo: "Clientes", somenteAdmin: true },
-  { caminho: "/modelos", rotulo: "Modelos de lançamento", somenteAdmin: true },
-  { caminho: "/usuarios", rotulo: "Usuários", somenteAdmin: true },
-  { caminho: "/senha", rotulo: "Alterar senha" }
-];
-
-// Estrutura comum das telas internas: menu lateral, cabeçalho e conteúdo.
-function Layout({ titulo, subtitulo, children }) {
+function Layout({ titulo, children }) {
   const navigate = useNavigate();
   const usuario = getUsuarioLogado();
   const admin = ehAdministrador(usuario);
 
-  const itensVisiveis = ITENS_MENU.filter(
-    (item) => !item.somenteAdmin || admin
-  );
-
   async function sair() {
     await logout();
-    navigate("/", { replace: true });
+    navigate("/");
   }
 
   return (
-    <div className="layout">
-      <aside className="layout-sidebar">
-        <h2 className="layout-marca">GESTOR</h2>
+    <>
+      <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
+        <Container>
+          <Navbar.Brand>Gestão de Tarefas</Navbar.Brand>
+          <Navbar.Toggle />
+          <Navbar.Collapse>
+            <Nav className="me-auto">
+              <Nav.Link as={NavLink} to="/dashboard">Dashboard</Nav.Link>
+              <Nav.Link as={NavLink} to="/tarefas">Kanban</Nav.Link>
+              <Nav.Link as={NavLink} to="/projetos">Projetos</Nav.Link>
+              {admin && (
+                <>
+                  <Nav.Link as={NavLink} to="/clientes">Clientes</Nav.Link>
+                  <Nav.Link as={NavLink} to="/modelos">Modelos</Nav.Link>
+                  <Nav.Link as={NavLink} to="/usuarios">Usuários</Nav.Link>
+                </>
+              )}
+              <Nav.Link as={NavLink} to="/senha">Alterar senha</Nav.Link>
+            </Nav>
+            <Navbar.Text className="me-3">
+              {usuario?.nome} ({admin ? "Administrador" : "Colaborador"})
+            </Navbar.Text>
+            <Button variant="outline-light" size="sm" onClick={sair}>
+              Sair
+            </Button>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
 
-        <nav className="layout-menu">
-          {itensVisiveis.map((item) => (
-            <NavLink
-              key={item.caminho}
-              to={item.caminho}
-              className={({ isActive }) =>
-                isActive ? "layout-menu-item ativo" : "layout-menu-item"
-              }
-            >
-              {item.rotulo}
-            </NavLink>
-          ))}
-        </nav>
-
-        <button className="layout-sair" onClick={sair}>
-          Sair
-        </button>
-      </aside>
-
-      <div className="layout-principal">
-        <header className="layout-cabecalho">
-          <div>
-            <h1>{titulo}</h1>
-            {subtitulo && <p>{subtitulo}</p>}
-          </div>
-
-          <div className="layout-usuario">
-            <strong>{usuario?.nome || "Usuário"}</strong>
-            <span>{nomeDoNivel(usuario)}</span>
-          </div>
-        </header>
-
-        <main className="layout-conteudo">{children}</main>
-      </div>
-    </div>
+      <Container className="pb-5">
+        <h2 className="mb-4">{titulo}</h2>
+        {children}
+      </Container>
+    </>
   );
 }
 

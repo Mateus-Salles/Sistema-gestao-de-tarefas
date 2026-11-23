@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Row, Col, Card, Button, Modal, Form, Badge, Alert, Nav } from "react-bootstrap";
 import {
   listarProjetos,
   listarUsuarios,
@@ -13,119 +14,72 @@ import {
   moverTarefa,
   mensagemDeErro
 } from "../services/api";
-import { getUsuarioLogado, ehAdministrador } from "../utils/perfil";
-import { DIVISOES, COLUNAS_KANBAN, rotulo, formatarData } from "../utils/rotulos";
+import { getUsuarioLogado, ehAdministrador } from "../services/sessao";
+import { DIVISOES, COLUNAS_KANBAN, formatarData } from "../utils/rotulos";
 import Layout from "../components/Layout";
-import "../components/Tela.css";
-import "./Tasks.css";
-
-const VISAO_PROJETO = "projeto";
-const VISAO_COLABORADOR = "colaborador";
-const VISAO_MINHAS = "minhas";
-
-// Busca as tarefas da visão escolhida. Cada rota já aplica as permissões:
-// colaborador só recebe as tarefas atribuídas a ele ou criadas por ele.
-function buscarTarefas(visao, projetoId, colaboradorId) {
-  if (visao === VISAO_PROJETO) return buscarKanbanProjeto(projetoId);
-  if (visao === VISAO_COLABORADOR) return buscarKanbanUsuario(colaboradorId);
-  return buscarMeuKanban();
-}
-
-const TAREFA_VAZIA = {
-  titulo: "",
-  descricao: "",
-  divisao: "produto",
-  vencimento: "",
-  projeto_id: "",
-  responsavel_id: ""
-};
 
 function Tasks() {
   const usuario = getUsuarioLogado();
   const admin = ehAdministrador(usuario);
-  const meuId = usuario?.id_usuario;
+  const [searchParams] = useSearchParams();
 
-  const [parametros, setParametros] = useSearchParams();
-
-  // Visão e seleção ficam na URL (?visao=...&projeto=...&usuario=...), assim
-  // o botão "Kanban" da tela de projetos abre direto no projeto certo.
-  const visao = admin ? parametros.get("visao") || VISAO_PROJETO : VISAO_MINHAS;
-  const projetoId = parametros.get("projeto") || "";
-  const colaboradorId = parametros.get("usuario") || "";
+  const [visao, setVisao] = useState(admin ? "projeto" : "minhas");
+  const [projetoId, setProjetoId] = useState(searchParams.get("projeto") || "");
+  const [colaboradorId, setColaboradorId] = useState("");
 
   const [projetos, setProjetos] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [tarefas, setTarefas] = useState([]);
-  // Chave da última busca concluída: enquanto for diferente da atual, está carregando.
-  const [chaveCarregada, setChaveCarregada] = useState(null);
-  const [versao, setVersao] = useState(0);
-  const recarregar = () => setVersao((v) => v + 1);
   const [erro, setErro] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
 
   const [filtroDivisao, setFiltroDivisao] = useState("");
-  const [filtroResponsavel, setFiltroResponsavel] = useState("");
   const [somenteAtrasadas, setSomenteAtrasadas] = useState(false);
 
-  // null = fechado; { id: null } = nova tarefa; { id: 7, ... } = editando
-  const [formulario, setFormulario] = useState(null);
-  const [dados, setDados] = useState(TAREFA_VAZIA);
-  const [salvando, setSalvando] = useState(false);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [tarefaEditando, setTarefaEditando] = useState(null);
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [divisao, setDivisao] = useState("produto");
+  const [vencimento, setVencimento] = useState("");
+  const [projetoTarefa, setProjetoTarefa] = useState("");
+  const [responsavel, setResponsavel] = useState("");
 
-  const [arrastandoId, setArrastandoId] = useState(null);
+  const faltaSelecionar =
+    (visao === "projeto" && !projetoId) || (visao === "colaborador" && !colaboradorId);
 
-  function mudarParametros(novos) {
-    setErro("");
-    setFormulario(null);
-    const proximo = new URLSearchParams(parametros);
-    for (const [chave, valor] of Object.entries(novos)) {
-      if (valor) proximo.set(chave, valor);
-      else proximo.delete(chave);
-    }
-    setParametros(proximo, { replace: true });
-  }
-
-  // Listas de apoio: projetos (todos os perfis) e usuários (só administrador).
   useEffect(() => {
-    async function carregarApoio() {
+    async function carregarListas() {
       try {
-        const [listaProjetos, listaUsuarios] = await Promise.all([
-          listarProjetos(),
-          admin ? listarUsuarios() : Promise.resolve([])
-        ]);
-        setProjetos(listaProjetos);
-        setUsuarios(listaUsuarios);
-      } catch (e) {
-        setErro(mensagemDeErro(e, "Não foi possível carregar os dados."));
+        setProjetos(await listarProjetos());
+        if (admin) {
+          setUsuarios(await listarUsuarios());
+        }
+      } catch (error) {
+        setErro(mensagemDeErro(error));
       }
     }
-
-    carregarApoio();
+    carregarListas();
   }, [admin]);
 
-  const semSelecao =
-    (visao === VISAO_PROJETO && !projetoId) ||
-    (visao === VISAO_COLABORADOR && !colaboradorId);
-  const chave = `${visao}|${projetoId}|${colaboradorId}|${versao}`;
-  const carregando = !semSelecao && chaveCarregada !== chave;
-
   useEffect(() => {
-    if (semSelecao) return undefined;
+    if (faltaSelecionar) return;
 
-    let ativo = true;
-
-    buscarTarefas(visao, projetoId, colaboradorId)
-      .then((lista) => ativo && setTarefas(lista))
-      .catch((e) => {
-        if (!ativo) return;
-        setTarefas([]);
-        setErro(mensagemDeErro(e, "Não foi possível carregar as tarefas."));
-      })
-      .finally(() => ativo && setChaveCarregada(chave));
-
-    return () => {
-      ativo = false;
-    };
-  }, [chave, semSelecao, visao, projetoId, colaboradorId]);
+    async function carregarTarefas() {
+      try {
+        if (visao === "projeto") {
+          setTarefas(await buscarKanbanProjeto(projetoId));
+        } else if (visao === "colaborador") {
+          setTarefas(await buscarKanbanUsuario(colaboradorId));
+        } else {
+          setTarefas(await buscarMeuKanban());
+        }
+      } catch (error) {
+        setErro(mensagemDeErro(error));
+      }
+    }
+    carregarTarefas();
+  }, [visao, projetoId, colaboradorId, faltaSelecionar, atualizar]);
 
   const colaboradores = usuarios.filter(
     (u) => u.nivel_acesso === "colaborador" && u.status === "ativo"
@@ -133,448 +87,339 @@ function Tasks() {
 
   function nomeResponsavel(tarefa) {
     if (!tarefa.responsavel_id) return "Sem responsável";
-    if (tarefa.responsavel_id === meuId) return "Você";
-
+    if (tarefa.responsavel_id === usuario.id_usuario) return "Você";
     const encontrado = usuarios.find((u) => u.id_usuario === tarefa.responsavel_id);
-    return encontrado?.nome || "Outro colaborador";
+    return encontrado ? encontrado.nome : "Outro colaborador";
   }
 
   function nomeProjeto(tarefa) {
-    if (tarefa.projeto_nome) return tarefa.projeto_nome;
-    if (!tarefa.projeto_id) return null;
-    return projetos.find((p) => p.id_projeto === tarefa.projeto_id)?.nome || null;
+    const projeto = projetos.find((p) => p.id_projeto === tarefa.projeto_id);
+    return projeto ? projeto.nome : "Tarefa avulsa";
   }
 
-  // Regra do sistema: só o responsável ou um administrador move a tarefa.
-  const podeMover = (tarefa) => admin || tarefa.responsavel_id === meuId;
+  function podeMover(tarefa) {
+    return admin || tarefa.responsavel_id === usuario.id_usuario;
+  }
 
-  // ---------- Formulário ----------
+  function trocarVisao(novaVisao) {
+    setErro("");
+    setTarefas([]);
+    setVisao(novaVisao);
+  }
 
-  function abrirNova() {
-    setDados({
-      ...TAREFA_VAZIA,
-      projeto_id: visao === VISAO_PROJETO ? projetoId : "",
-      responsavel_id: visao === VISAO_COLABORADOR ? colaboradorId : ""
-    });
-    setFormulario({ id: null });
+  function novaTarefa() {
+    setTarefaEditando(null);
+    setTitulo("");
+    setDescricao("");
+    setDivisao("produto");
+    setVencimento("");
+    setProjetoTarefa(visao === "projeto" ? projetoId : "");
+    setResponsavel(visao === "colaborador" ? colaboradorId : "");
+    setMostrarModal(true);
   }
 
   function abrirEdicao(tarefa) {
-    setDados({
-      titulo: tarefa.titulo,
-      descricao: tarefa.descricao || "",
-      divisao: tarefa.divisao,
-      vencimento: tarefa.vencimento || "",
-      projeto_id: tarefa.projeto_id ? String(tarefa.projeto_id) : "",
-      responsavel_id: tarefa.responsavel_id ? String(tarefa.responsavel_id) : ""
-    });
-    setFormulario({ id: tarefa.id_tarefa, responsavelOriginal: tarefa.responsavel_id });
+    setTarefaEditando(tarefa);
+    setTitulo(tarefa.titulo);
+    setDescricao(tarefa.descricao || "");
+    setDivisao(tarefa.divisao);
+    setVencimento(tarefa.vencimento || "");
+    setResponsavel(tarefa.responsavel_id ? String(tarefa.responsavel_id) : "");
+    setMostrarModal(true);
   }
 
   async function salvar(e) {
     e.preventDefault();
     setErro("");
-    setSalvando(true);
 
-    const camposEditaveis = {
-      titulo: dados.titulo.trim(),
-      descricao: dados.descricao.trim() || null,
-      divisao: dados.divisao,
-      vencimento: dados.vencimento || null
+    const dados = {
+      titulo,
+      descricao: descricao || null,
+      divisao,
+      vencimento: vencimento || null
     };
 
     try {
-      if (formulario.id) {
-        await editarTarefa(formulario.id, camposEditaveis);
+      if (tarefaEditando) {
+        await editarTarefa(tarefaEditando.id_tarefa, dados);
 
-        const novoResponsavel = Number(dados.responsavel_id) || null;
-        if (admin && novoResponsavel && novoResponsavel !== formulario.responsavelOriginal) {
-          await atribuirResponsavel(formulario.id, novoResponsavel);
+        if (admin && responsavel && Number(responsavel) !== tarefaEditando.responsavel_id) {
+          await atribuirResponsavel(tarefaEditando.id_tarefa, Number(responsavel));
         }
       } else {
         await criarTarefa({
-          ...camposEditaveis,
-          projeto_id: Number(dados.projeto_id) || null,
-          responsavel_id: Number(dados.responsavel_id) || null
+          ...dados,
+          projeto_id: projetoTarefa ? Number(projetoTarefa) : null,
+          responsavel_id: responsavel ? Number(responsavel) : null
         });
       }
-
-      setFormulario(null);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar a tarefa."));
-    } finally {
-      setSalvando(false);
+      setMostrarModal(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
   async function excluir() {
-    if (!window.confirm("Excluir esta tarefa? Essa ação não pode ser desfeita.")) {
-      return;
-    }
-
+    if (!window.confirm("Deseja excluir esta tarefa?")) return;
     setErro("");
-    setSalvando(true);
 
     try {
-      await excluirTarefa(formulario.id);
-      setFormulario(null);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível excluir a tarefa."));
-    } finally {
-      setSalvando(false);
+      await excluirTarefa(tarefaEditando.id_tarefa);
+      setMostrarModal(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  // ---------- Arrastar e soltar ----------
-
-  function iniciarArraste(evento, tarefa) {
-    setArrastandoId(tarefa.id_tarefa);
-    evento.dataTransfer.effectAllowed = "move";
-    evento.dataTransfer.setData("text/plain", String(tarefa.id_tarefa));
-  }
-
-  function permitirSoltar(evento) {
-    evento.preventDefault();
-    evento.dataTransfer.dropEffect = "move";
-  }
-
-  async function soltar(evento, novoStatus) {
-    evento.preventDefault();
-
-    const id = Number(evento.dataTransfer.getData("text/plain")) || arrastandoId;
-    setArrastandoId(null);
-
+  async function soltarNaColuna(e, status) {
+    e.preventDefault();
+    const id = Number(e.dataTransfer.getData("id"));
     const tarefa = tarefas.find((t) => t.id_tarefa === id);
-    if (!tarefa || tarefa.kanban_status === novoStatus) return;
 
-    const anteriores = tarefas;
-    setTarefas(
-      tarefas.map((t) => (t.id_tarefa === id ? { ...t, kanban_status: novoStatus } : t))
-    );
+    if (!tarefa || tarefa.kanban_status === status) return;
     setErro("");
 
     try {
-      const atualizada = await moverTarefa(id, novoStatus);
-      setTarefas((atuais) =>
-        atuais.map((t) => (t.id_tarefa === id ? { ...t, ...atualizada } : t))
-      );
-    } catch (e) {
-      setTarefas(anteriores);
-      setErro(mensagemDeErro(e, "Não foi possível mover a tarefa."));
+      await moverTarefa(id, status);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  // ---------- Filtros ----------
-
-  const tarefasFiltradas = (carregando ? [] : tarefas).filter((t) => {
-    if (filtroDivisao && t.divisao !== filtroDivisao) return false;
-    if (somenteAtrasadas && !t.atrasada) return false;
-    if (filtroResponsavel === "sem" && t.responsavel_id) return false;
-    if (filtroResponsavel && filtroResponsavel !== "sem" &&
-        String(t.responsavel_id) !== filtroResponsavel) return false;
+  const tarefasFiltradas = (faltaSelecionar ? [] : tarefas).filter((tarefa) => {
+    if (filtroDivisao && tarefa.divisao !== filtroDivisao) return false;
+    if (somenteAtrasadas && !tarefa.atrasada) return false;
     return true;
   });
 
-  const mensagemVazia =
-    visao === VISAO_PROJETO && !projetoId
-      ? "Selecione um projeto para ver o Kanban."
-      : visao === VISAO_COLABORADOR && !colaboradorId
-        ? "Selecione um colaborador para ver as tarefas dele."
-        : null;
-
-  // ---------- Renderização ----------
-
-  function renderizarCartao(tarefa) {
-    const movivel = podeMover(tarefa);
-    const projeto = nomeProjeto(tarefa);
-    const classes = ["kanban-card"];
-    if (arrastandoId === tarefa.id_tarefa) classes.push("dragging");
-    if (!movivel) classes.push("bloqueado");
-
-    return (
-      <div
-        key={tarefa.id_tarefa}
-        className={classes.join(" ")}
-        draggable={movivel}
-        onDragStart={(e) => iniciarArraste(e, tarefa)}
-        onDragEnd={() => setArrastandoId(null)}
-        onClick={() => abrirEdicao(tarefa)}
-        title={movivel ? "Arraste para mudar de coluna. Clique para editar." :
-          "Só o responsável ou um administrador pode mover esta tarefa."}
-      >
-        <span className={`tag ${tarefa.divisao}`}>{rotulo(DIVISOES, tarefa.divisao)}</span>
-
-        <h3>{tarefa.titulo}</h3>
-
-        <p>{nomeResponsavel(tarefa)}</p>
-        {projeto && visao !== VISAO_PROJETO && <p className="kanban-projeto">{projeto}</p>}
-
-        {tarefa.vencimento && (
-          <span className={tarefa.atrasada ? "prazo atrasado" : "prazo"}>
-            {tarefa.atrasada ? "Atrasada · " : ""}
-            {formatarData(tarefa.vencimento)}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  const editando = formulario?.id;
+  const projetosEmAndamento = projetos.filter((p) => p.status === "andamento");
 
   return (
-    <Layout titulo="Kanban" subtitulo="Acompanhe o andamento das tarefas.">
-      <section className="kanban-body">
-        <div className="kanban-top">
-          <div className="kanban-tabs">
-            {admin && (
-              <>
-                <button
-                  className={visao === VISAO_PROJETO ? "tab active" : "tab"}
-                  onClick={() => mudarParametros({ visao: VISAO_PROJETO })}
-                >
-                  Kanban do projeto
-                </button>
-                <button
-                  className={visao === VISAO_COLABORADOR ? "tab active" : "tab"}
-                  onClick={() => mudarParametros({ visao: VISAO_COLABORADOR })}
-                >
-                  Kanban por colaborador
-                </button>
-              </>
-            )}
-            <button
-              className={visao === VISAO_MINHAS ? "tab active" : "tab"}
-              onClick={() => admin && mudarParametros({ visao: VISAO_MINHAS })}
-            >
-              {admin ? "Criadas por mim" : "Minhas tarefas"}
-            </button>
-          </div>
+    <Layout titulo="Kanban">
+      {admin && (
+        <Nav variant="tabs" className="mb-3" activeKey={visao} onSelect={trocarVisao}>
+          <Nav.Item>
+            <Nav.Link eventKey="projeto">Por projeto</Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey="colaborador">Por colaborador</Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey="minhas">Criadas por mim</Nav.Link>
+          </Nav.Item>
+        </Nav>
+      )}
 
-          <button className="new-task-button" onClick={abrirNova}>
-            + Nova tarefa
-          </button>
-        </div>
-
-        <div className="kanban-filters">
-          {visao === VISAO_PROJETO && (
-            <select
-              value={projetoId}
-              onChange={(e) => mudarParametros({ projeto: e.target.value })}
-            >
+      <Row className="mb-3 g-2 align-items-center">
+        {visao === "projeto" && (
+          <Col md={4}>
+            <Form.Select value={projetoId} onChange={(e) => setProjetoId(e.target.value)}>
               <option value="">Selecione o projeto</option>
               {projetos.map((p) => (
                 <option key={p.id_projeto} value={p.id_projeto}>
                   {p.nome}
                 </option>
               ))}
-            </select>
-          )}
-
-          {visao === VISAO_COLABORADOR && (
-            <select
-              value={colaboradorId}
-              onChange={(e) => mudarParametros({ usuario: e.target.value })}
-            >
+            </Form.Select>
+          </Col>
+        )}
+        {visao === "colaborador" && (
+          <Col md={4}>
+            <Form.Select value={colaboradorId} onChange={(e) => setColaboradorId(e.target.value)}>
               <option value="">Selecione o colaborador</option>
               {colaboradores.map((u) => (
                 <option key={u.id_usuario} value={u.id_usuario}>
                   {u.nome}
                 </option>
               ))}
-            </select>
-          )}
-
-          <select value={filtroDivisao} onChange={(e) => setFiltroDivisao(e.target.value)}>
-            <option value="">Divisão: Todas</option>
+            </Form.Select>
+          </Col>
+        )}
+        <Col md={3}>
+          <Form.Select value={filtroDivisao} onChange={(e) => setFiltroDivisao(e.target.value)}>
+            <option value="">Todas as divisões</option>
             {DIVISOES.map((d) => (
               <option key={d.valor} value={d.valor}>
                 {d.rotulo}
               </option>
             ))}
-          </select>
+          </Form.Select>
+        </Col>
+        <Col md="auto">
+          <Form.Check
+            type="switch"
+            label="Somente atrasadas"
+            checked={somenteAtrasadas}
+            onChange={(e) => setSomenteAtrasadas(e.target.checked)}
+          />
+        </Col>
+        <Col className="text-end">
+          <Button onClick={novaTarefa}>Nova tarefa</Button>
+        </Col>
+      </Row>
 
-          {admin && visao === VISAO_PROJETO && (
-            <select
-              value={filtroResponsavel}
-              onChange={(e) => setFiltroResponsavel(e.target.value)}
-            >
-              <option value="">Responsável: Todos</option>
-              <option value="sem">Sem responsável</option>
-              {colaboradores.map((u) => (
-                <option key={u.id_usuario} value={u.id_usuario}>
-                  {u.nome}
-                </option>
-              ))}
-            </select>
-          )}
+      {erro && <Alert variant="danger">{erro}</Alert>}
 
-          <button
-            className={somenteAtrasadas ? "filter-button selected" : "filter-button"}
-            onClick={() => setSomenteAtrasadas(!somenteAtrasadas)}
-          >
-            Somente atrasadas
-          </button>
-        </div>
+      {faltaSelecionar ? (
+        <Alert variant="secondary">
+          {visao === "projeto"
+            ? "Selecione um projeto para ver o Kanban."
+            : "Selecione um colaborador para ver as tarefas dele."}
+        </Alert>
+      ) : (
+        <Row className="g-3">
+          {COLUNAS_KANBAN.map((coluna) => {
+            const tarefasDaColuna = tarefasFiltradas.filter((t) => t.kanban_status === coluna.valor);
 
-        {erro && <p className="tela-erro">{erro}</p>}
+            return (
+              <Col md={3} key={coluna.valor}>
+                <Card
+                  className="coluna-kanban bg-light"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => soltarNaColuna(e, coluna.valor)}
+                >
+                  <Card.Header className="d-flex justify-content-between">
+                    <strong>{coluna.rotulo}</strong>
+                    <Badge bg="secondary">{tarefasDaColuna.length}</Badge>
+                  </Card.Header>
+                  <Card.Body className="p-2">
+                    {tarefasDaColuna.map((tarefa) => {
+                      const corDivisao = DIVISOES.find((d) => d.valor === tarefa.divisao);
 
-        {formulario && (
-          <form className="task-form" onSubmit={salvar}>
-            <h2>{editando ? "Editar tarefa" : "Nova tarefa"}</h2>
+                      return (
+                        <Card
+                          key={tarefa.id_tarefa}
+                          className="cartao-tarefa mb-2"
+                          draggable={podeMover(tarefa)}
+                          onDragStart={(e) => e.dataTransfer.setData("id", tarefa.id_tarefa)}
+                          onClick={() => abrirEdicao(tarefa)}
+                        >
+                          <Card.Body className="p-2">
+                            <Badge bg={corDivisao?.cor} className="mb-1">
+                              {corDivisao?.rotulo}
+                            </Badge>
+                            <div className="fw-semibold">{tarefa.titulo}</div>
+                            <small className="text-muted d-block">{nomeResponsavel(tarefa)}</small>
+                            {visao !== "projeto" && (
+                              <small className="text-muted d-block">{nomeProjeto(tarefa)}</small>
+                            )}
+                            {tarefa.vencimento && (
+                              <small className={tarefa.atrasada ? "text-danger" : "text-muted"}>
+                                {tarefa.atrasada ? "Atrasada - " : "Prazo: "}
+                                {formatarData(tarefa.vencimento)}
+                              </small>
+                            )}
+                          </Card.Body>
+                        </Card>
+                      );
+                    })}
+                  </Card.Body>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      )}
 
-            <input
-              type="text"
-              placeholder="Título da tarefa"
-              maxLength={200}
-              value={dados.titulo}
-              onChange={(e) => setDados({ ...dados, titulo: e.target.value })}
-              required
-            />
+      <Modal show={mostrarModal} onHide={() => setMostrarModal(false)}>
+        <Form onSubmit={salvar}>
+          <Modal.Header closeButton>
+            <Modal.Title>{tarefaEditando ? "Editar tarefa" : "Nova tarefa"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Título</Form.Label>
+              <Form.Control
+                maxLength={200}
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                required
+              />
+            </Form.Group>
 
-            <textarea
-              placeholder="Descrição (opcional)"
-              value={dados.descricao}
-              onChange={(e) => setDados({ ...dados, descricao: e.target.value })}
-            />
+            <Form.Group className="mb-3">
+              <Form.Label>Descrição</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+              />
+            </Form.Group>
 
-            <select
-              value={dados.divisao}
-              onChange={(e) => setDados({ ...dados, divisao: e.target.value })}
-            >
-              {DIVISOES.map((d) => (
-                <option key={d.valor} value={d.valor}>
-                  {d.rotulo}
-                </option>
-              ))}
-            </select>
+            <Row className="mb-3">
+              <Col>
+                <Form.Label>Divisão</Form.Label>
+                <Form.Select value={divisao} onChange={(e) => setDivisao(e.target.value)}>
+                  {DIVISOES.map((d) => (
+                    <option key={d.valor} value={d.valor}>
+                      {d.rotulo}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col>
+                <Form.Label>Prazo</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={vencimento}
+                  onChange={(e) => setVencimento(e.target.value)}
+                />
+              </Col>
+            </Row>
 
-            <label className="task-form-rotulo" htmlFor="tarefa-vencimento">
-              Prazo (opcional)
-            </label>
-            <input
-              id="tarefa-vencimento"
-              type="date"
-              value={dados.vencimento}
-              onChange={(e) => setDados({ ...dados, vencimento: e.target.value })}
-            />
-
-            {!editando && (
-              <select
-                value={dados.projeto_id}
-                onChange={(e) => setDados({ ...dados, projeto_id: e.target.value })}
-              >
-                <option value="">Sem projeto (tarefa avulsa)</option>
-                {projetos
-                  .filter((p) => p.status === "andamento")
-                  .map((p) => (
+            {!tarefaEditando && (
+              <Form.Group className="mb-3">
+                <Form.Label>Projeto</Form.Label>
+                <Form.Select value={projetoTarefa} onChange={(e) => setProjetoTarefa(e.target.value)}>
+                  <option value="">Sem projeto (tarefa avulsa)</option>
+                  {projetosEmAndamento.map((p) => (
                     <option key={p.id_projeto} value={p.id_projeto}>
                       {p.nome}
                     </option>
                   ))}
-              </select>
+                </Form.Select>
+              </Form.Group>
             )}
 
-            {admin ? (
-              <select
-                value={dados.responsavel_id}
-                onChange={(e) => setDados({ ...dados, responsavel_id: e.target.value })}
-              >
-                {/* A API não permite remover o responsável depois de atribuído. */}
-                {(!editando || !formulario.responsavelOriginal) && (
+            {admin && (
+              <Form.Group>
+                <Form.Label>Responsável</Form.Label>
+                <Form.Select value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
                   <option value="">Sem responsável</option>
-                )}
-                {/* Responsável atual que não está na lista (ex.: usuário inativado). */}
-                {editando && formulario.responsavelOriginal &&
-                  !colaboradores.some((u) => u.id_usuario === formulario.responsavelOriginal) && (
-                  <option value={formulario.responsavelOriginal}>
-                    {usuarios.find((u) => u.id_usuario === formulario.responsavelOriginal)?.nome ||
-                      "Responsável atual"}
-                  </option>
-                )}
-                {colaboradores.map((u) => (
-                  <option key={u.id_usuario} value={u.id_usuario}>
-                    {u.nome}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              !editando && (
-                <select
-                  value={dados.responsavel_id}
-                  onChange={(e) => setDados({ ...dados, responsavel_id: e.target.value })}
-                >
-                  <option value="">Sem responsável</option>
-                  <option value={meuId}>Eu mesmo</option>
-                </select>
-              )
+                  {colaboradores.map((u) => (
+                    <option key={u.id_usuario} value={u.id_usuario}>
+                      {u.nome}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
             )}
 
-            <div className="tela-form-botoes">
-              <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              {editando && admin && (
-                <button
-                  type="button"
-                  className="botao-perigo"
-                  onClick={excluir}
-                  disabled={salvando}
-                >
-                  Excluir
-                </button>
-              )}
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        {mensagemVazia ? (
-          <p className="tela-carregando">{mensagemVazia}</p>
-        ) : (
-          <div className="kanban-board">
-            {COLUNAS_KANBAN.map((coluna) => {
-              const daColuna = tarefasFiltradas.filter(
-                (t) => t.kanban_status === coluna.valor
-              );
-
-              return (
-                <div
-                  key={coluna.valor}
-                  className="kanban-column"
-                  onDragOver={permitirSoltar}
-                  onDrop={(e) => soltar(e, coluna.valor)}
-                >
-                  <div className="column-header">
-                    <h2>{coluna.rotulo}</h2>
-                    <span>{daColuna.length}</span>
-                  </div>
-
-                  <div className="kanban-cards">
-                    {daColuna.map(renderizarCartao)}
-                    {carregando && daColuna.length === 0 && (
-                      <p className="kanban-vazio">Carregando...</p>
-                    )}
-                  </div>
-
-                  {coluna.valor === "a_fazer" && (
-                    <div className="add-task" onClick={abrirNova}>
-                      + Adicionar tarefa
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+            {!admin && !tarefaEditando && (
+              <Form.Check
+                label="Sou o responsável por esta tarefa"
+                checked={responsavel === String(usuario.id_usuario)}
+                onChange={(e) => setResponsavel(e.target.checked ? String(usuario.id_usuario) : "")}
+              />
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            {tarefaEditando && admin && (
+              <Button variant="danger" className="me-auto" onClick={excluir}>
+                Excluir
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setMostrarModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Layout>
   );
 }

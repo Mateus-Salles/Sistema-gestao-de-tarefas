@@ -1,17 +1,15 @@
 import { Navigate } from "react-router-dom";
-import { getUsuarioLogado, ehAdministrador } from "../utils/perfil";
+import { getUsuarioLogado, ehAdministrador } from "../services/sessao";
 
-// Só deixa entrar quem está logado.
-// Com somenteAdmin, colaboradores são mandados de volta para o dashboard.
-function RotaProtegida({ somenteAdmin = false, children }) {
+function RotaProtegida({ somenteAdmin, children }) {
   const usuario = getUsuarioLogado();
 
   if (!usuario) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" />;
   }
 
   if (somenteAdmin && !ehAdministrador(usuario)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" />;
   }
 
   return children;

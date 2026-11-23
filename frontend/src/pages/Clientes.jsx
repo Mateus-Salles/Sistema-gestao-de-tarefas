@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, Button, Modal, Form, Badge, Alert, Row, Col } from "react-bootstrap";
 import {
   listarClientes,
   listarProjetos,
@@ -7,222 +8,191 @@ import {
   alterarStatusCliente,
   mensagemDeErro
 } from "../services/api";
-import { STATUS_CLIENTE, rotulo } from "../utils/rotulos";
 import Layout from "../components/Layout";
-import "../components/Tela.css";
-
-const COLUNAS = { gridTemplateColumns: "2fr 2fr 0.8fr 0.8fr 1.2fr" };
-const FORM_VAZIO = { nome: "", contato: "" };
-
-// Busca os clientes e conta quantos projetos cada um tem.
-async function buscarDados() {
-  const [clientes, projetos] = await Promise.all([listarClientes(), listarProjetos()]);
-
-  const projetosPorCliente = {};
-  for (const projeto of projetos) {
-    projetosPorCliente[projeto.cliente_id] = (projetosPorCliente[projeto.cliente_id] || 0) + 1;
-  }
-
-  return { clientes, projetosPorCliente };
-}
 
 function Clientes() {
   const [clientes, setClientes] = useState([]);
-  const [projetosPorCliente, setProjetosPorCliente] = useState({});
-  const [carregando, setCarregando] = useState(true);
+  const [projetos, setProjetos] = useState([]);
   const [erro, setErro] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
 
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
 
-  // null = formulário fechado; { id: null } = novo; { id: 5 } = editando
-  const [formulario, setFormulario] = useState(null);
-  const [dados, setDados] = useState(FORM_VAZIO);
-  const [salvando, setSalvando] = useState(false);
-
-  // Incrementar a versão faz a lista ser buscada de novo.
-  const [versao, setVersao] = useState(0);
-  const recarregar = () => setVersao((v) => v + 1);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
+  const [nome, setNome] = useState("");
+  const [contato, setContato] = useState("");
 
   useEffect(() => {
-    let ativo = true;
+    async function carregar() {
+      try {
+        setClientes(await listarClientes());
+        setProjetos(await listarProjetos());
+      } catch (error) {
+        setErro(mensagemDeErro(error));
+      }
+    }
+    carregar();
+  }, [atualizar]);
 
-    buscarDados()
-      .then((r) => {
-        if (!ativo) return;
-        setClientes(r.clientes);
-        setProjetosPorCliente(r.projetosPorCliente);
-      })
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os clientes.")))
-      .finally(() => ativo && setCarregando(false));
-
-    return () => {
-      ativo = false;
-    };
-  }, [versao]);
-
-  function abrirNovo() {
-    setDados(FORM_VAZIO);
-    setFormulario({ id: null });
+  function novoCliente() {
+    setIdEditando(null);
+    setNome("");
+    setContato("");
+    setMostrarModal(true);
   }
 
   function abrirEdicao(cliente) {
-    setDados({ nome: cliente.nome, contato: cliente.contato });
-    setFormulario({ id: cliente.id_cliente });
+    setIdEditando(cliente.id_cliente);
+    setNome(cliente.nome);
+    setContato(cliente.contato);
+    setMostrarModal(true);
   }
 
   async function salvar(e) {
     e.preventDefault();
     setErro("");
-    setSalvando(true);
-
-    const corpo = { nome: dados.nome.trim(), contato: dados.contato.trim() };
 
     try {
-      if (formulario.id) {
-        await editarCliente(formulario.id, corpo);
+      if (idEditando) {
+        await editarCliente(idEditando, { nome, contato });
       } else {
-        await criarCliente(corpo);
+        await criarCliente({ nome, contato });
       }
-
-      setFormulario(null);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o cliente."));
-    } finally {
-      setSalvando(false);
+      setMostrarModal(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  async function alternarStatus(cliente) {
+  async function mudarStatus(cliente) {
     setErro("");
     const novoStatus = cliente.status === "ativa" ? "inativa" : "ativa";
 
     try {
       await alterarStatusCliente(cliente.id_cliente, novoStatus);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  const termo = busca.trim().toLowerCase();
+  function quantidadeProjetos(idCliente) {
+    return projetos.filter((p) => p.cliente_id === idCliente).length;
+  }
+
   const clientesFiltrados = clientes.filter((cliente) => {
-    const correspondeBusca =
-      !termo ||
-      cliente.nome.toLowerCase().includes(termo) ||
-      (cliente.contato || "").toLowerCase().includes(termo);
-
-    const correspondeStatus = !statusFiltro || cliente.status === statusFiltro;
-
-    return correspondeBusca && correspondeStatus;
+    const texto = busca.toLowerCase();
+    const achouNome =
+      cliente.nome.toLowerCase().includes(texto) ||
+      cliente.contato.toLowerCase().includes(texto);
+    const achouStatus = filtroStatus === "" || cliente.status === filtroStatus;
+    return achouNome && achouStatus;
   });
 
   return (
-    <Layout titulo="Clientes" subtitulo="Clientes da agência e seus contatos.">
-      <div className="tela-conteudo">
-        <div className="tela-filtros">
-          <input
-            type="text"
-            placeholder="Buscar por nome ou contato..."
+    <Layout titulo="Clientes">
+      {erro && <Alert variant="danger">{erro}</Alert>}
+
+      <Row className="mb-3 g-2">
+        <Col md={5}>
+          <Form.Control
+            placeholder="Buscar por nome ou contato"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
+        </Col>
+        <Col md={3}>
+          <Form.Select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+            <option value="">Todos os status</option>
+            <option value="ativa">Ativo</option>
+            <option value="inativa">Inativo</option>
+          </Form.Select>
+        </Col>
+        <Col className="text-end">
+          <Button onClick={novoCliente}>Novo cliente</Button>
+        </Col>
+      </Row>
 
-          <select
-            value={statusFiltro}
-            onChange={(e) => setStatusFiltro(e.target.value)}
-          >
-            <option value="">Status: Todos</option>
-            {STATUS_CLIENTE.map((s) => (
-              <option key={s.valor} value={s.valor}>
-                {s.rotulo}
-              </option>
-            ))}
-          </select>
-
-          <button className="botao-primario" onClick={abrirNovo}>
-            + Novo cliente
-          </button>
-        </div>
-
-        {erro && <p className="tela-erro">{erro}</p>}
-
-        {formulario && (
-          <form className="tela-form" onSubmit={salvar}>
-            <h2>{formulario.id ? "Editar cliente" : "Novo cliente"}</h2>
-
-            <label htmlFor="cliente-nome">Nome</label>
-            <input
-              id="cliente-nome"
-              type="text"
-              maxLength={150}
-              value={dados.nome}
-              onChange={(e) => setDados({ ...dados, nome: e.target.value })}
-              required
-            />
-
-            <label htmlFor="cliente-contato">Contato (e-mail, telefone ou responsável)</label>
-            <input
-              id="cliente-contato"
-              type="text"
-              maxLength={150}
-              value={dados.contato}
-              onChange={(e) => setDados({ ...dados, contato: e.target.value })}
-              required
-            />
-
-            <div className="tela-form-botoes">
-              <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="tela-tabela">
-          <div className="tela-tabela-cabecalho" style={COLUNAS}>
-            <span>Cliente</span>
-            <span>Contato</span>
-            <span>Projetos</span>
-            <span>Status</span>
-            <span>Ações</span>
-          </div>
-
+      <Table bordered hover className="bg-white">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Contato</th>
+            <th>Projetos</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
           {clientesFiltrados.map((cliente) => (
-            <div className="tela-tabela-linha" style={COLUNAS} key={cliente.id_cliente}>
-              <span>{cliente.nome}</span>
-              <span>{cliente.contato}</span>
-              <span>{projetosPorCliente[cliente.id_cliente] || 0}</span>
-              <span>
-                <span className={`selo ${cliente.status === "ativa" ? "verde" : "cinza"}`}>
-                  {rotulo(STATUS_CLIENTE, cliente.status)}
-                </span>
-              </span>
-              <span className="acoes">
-                <button onClick={() => abrirEdicao(cliente)}>Editar</button>
-                <span>·</span>
-                <button onClick={() => alternarStatus(cliente)}>
+            <tr key={cliente.id_cliente}>
+              <td>{cliente.nome}</td>
+              <td>{cliente.contato}</td>
+              <td>{quantidadeProjetos(cliente.id_cliente)}</td>
+              <td>
+                {cliente.status === "ativa" ? (
+                  <Badge bg="success">Ativo</Badge>
+                ) : (
+                  <Badge bg="secondary">Inativo</Badge>
+                )}
+              </td>
+              <td>
+                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => abrirEdicao(cliente)}>
+                  Editar
+                </Button>
+                <Button size="sm" variant="outline-secondary" onClick={() => mudarStatus(cliente)}>
                   {cliente.status === "ativa" ? "Inativar" : "Ativar"}
-                </button>
-              </span>
-            </div>
+                </Button>
+              </td>
+            </tr>
           ))}
-
-          {carregando && <p className="tela-vazio">Carregando...</p>}
-
-          {!carregando && clientesFiltrados.length === 0 && (
-            <p className="tela-vazio">Nenhum cliente encontrado.</p>
+          {clientesFiltrados.length === 0 && (
+            <tr>
+              <td colSpan={5} className="text-center text-muted">
+                Nenhum cliente encontrado.
+              </td>
+            </tr>
           )}
-        </div>
-      </div>
+        </tbody>
+      </Table>
+
+      <Modal show={mostrarModal} onHide={() => setMostrarModal(false)}>
+        <Form onSubmit={salvar}>
+          <Modal.Header closeButton>
+            <Modal.Title>{idEditando ? "Editar cliente" : "Novo cliente"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Nome</Form.Label>
+              <Form.Control
+                maxLength={150}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Contato</Form.Label>
+              <Form.Control
+                maxLength={150}
+                placeholder="E-mail, telefone ou nome do responsável"
+                value={contato}
+                onChange={(e) => setContato(e.target.value)}
+                required
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setMostrarModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Layout>
   );
 }

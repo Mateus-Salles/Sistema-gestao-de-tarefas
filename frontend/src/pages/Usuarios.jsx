@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, Button, Modal, Form, Badge, Alert, Row, Col } from "react-bootstrap";
 import {
   listarUsuarios,
   criarUsuario,
@@ -6,286 +7,242 @@ import {
   alterarStatusUsuario,
   mensagemDeErro
 } from "../services/api";
-import { getUsuarioLogado } from "../utils/perfil";
-import { NIVEIS_ACESSO, STATUS_USUARIO, rotulo, formatarData } from "../utils/rotulos";
+import { getUsuarioLogado } from "../services/sessao";
+import { formatarData } from "../utils/rotulos";
 import Layout from "../components/Layout";
-import "../components/Tela.css";
-
-const COLUNAS = { gridTemplateColumns: "1.6fr 2fr 1fr 0.8fr 1fr 1.2fr" };
-const FORM_VAZIO = { nome: "", email: "", senha: "", nivel_acesso: "colaborador" };
-const SENHA_MINIMA = 8;
 
 function Usuarios() {
-  const meuId = getUsuarioLogado()?.id_usuario;
+  const meuId = getUsuarioLogado().id_usuario;
 
   const [usuarios, setUsuarios] = useState([]);
-  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
 
   const [busca, setBusca] = useState("");
-  const [nivelFiltro, setNivelFiltro] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+  const [filtroNivel, setFiltroNivel] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
 
-  // null = fechado; { id: null } = novo usuário; { id: 4 } = editando
-  const [formulario, setFormulario] = useState(null);
-  const [dados, setDados] = useState(FORM_VAZIO);
-  const [salvando, setSalvando] = useState(false);
-
-  // Incrementar a versão faz a lista ser buscada de novo.
-  const [versao, setVersao] = useState(0);
-  const recarregar = () => setVersao((v) => v + 1);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [nivel, setNivel] = useState("colaborador");
 
   useEffect(() => {
-    let ativo = true;
+    async function carregar() {
+      try {
+        setUsuarios(await listarUsuarios());
+      } catch (error) {
+        setErro(mensagemDeErro(error));
+      }
+    }
+    carregar();
+  }, [atualizar]);
 
-    listarUsuarios()
-      .then((lista) => ativo && setUsuarios(lista))
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os usuários.")))
-      .finally(() => ativo && setCarregando(false));
-
-    return () => {
-      ativo = false;
-    };
-  }, [versao]);
-
-  function limparMensagens() {
-    setErro("");
-    setSucesso("");
-  }
-
-  function abrirNovo() {
-    limparMensagens();
-    setDados(FORM_VAZIO);
-    setFormulario({ id: null });
+  function novoUsuario() {
+    setIdEditando(null);
+    setNome("");
+    setEmail("");
+    setSenha("");
+    setNivel("colaborador");
+    setMostrarModal(true);
   }
 
   function abrirEdicao(usuario) {
-    limparMensagens();
-    setDados({
-      nome: usuario.nome,
-      email: usuario.email,
-      senha: "",
-      nivel_acesso: usuario.nivel_acesso
-    });
-    setFormulario({ id: usuario.id_usuario });
+    setIdEditando(usuario.id_usuario);
+    setNome(usuario.nome);
+    setEmail(usuario.email);
+    setNivel(usuario.nivel_acesso);
+    setMostrarModal(true);
   }
 
   async function salvar(e) {
     e.preventDefault();
-    limparMensagens();
-    setSalvando(true);
-
-    const corpo = {
-      nome: dados.nome.trim(),
-      email: dados.email.trim(),
-      nivel_acesso: dados.nivel_acesso
-    };
+    setErro("");
+    setSucesso("");
 
     try {
-      if (formulario.id) {
-        // O próprio administrador não pode mudar o seu nível de acesso.
-        if (formulario.id === meuId) delete corpo.nivel_acesso;
-
-        await editarUsuario(formulario.id, corpo);
+      if (idEditando) {
+        const dados = { nome, email };
+        if (idEditando !== meuId) {
+          dados.nivel_acesso = nivel;
+        }
+        await editarUsuario(idEditando, dados);
         setSucesso("Usuário atualizado.");
       } else {
-        await criarUsuario({ ...corpo, senha: dados.senha });
-        setSucesso(
-          `Usuário criado. Informe a senha inicial para ${corpo.nome}; ` +
-          "ele pode trocá-la depois em Alterar senha."
-        );
+        await criarUsuario({ nome, email, senha, nivel_acesso: nivel });
+        setSucesso("Usuário criado. Passe a senha inicial para ele.");
       }
-
-      setFormulario(null);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o usuário."));
-    } finally {
-      setSalvando(false);
+      setMostrarModal(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  async function alternarStatus(usuario) {
-    limparMensagens();
+  async function mudarStatus(usuario) {
+    setErro("");
+    setSucesso("");
     const novoStatus = usuario.status === "ativo" ? "inativo" : "ativo";
 
     try {
       await alterarStatusUsuario(usuario.id_usuario, novoStatus);
-      recarregar();
-    } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
   }
 
-  const termo = busca.trim().toLowerCase();
-  const usuariosFiltrados = usuarios.filter((u) => {
-    if (termo && !u.nome.toLowerCase().includes(termo) &&
-        !u.email.toLowerCase().includes(termo)) return false;
-    if (nivelFiltro && u.nivel_acesso !== nivelFiltro) return false;
-    if (statusFiltro && u.status !== statusFiltro) return false;
-    return true;
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    const texto = busca.toLowerCase();
+    const achouNome =
+      usuario.nome.toLowerCase().includes(texto) ||
+      usuario.email.toLowerCase().includes(texto);
+    const achouNivel = filtroNivel === "" || usuario.nivel_acesso === filtroNivel;
+    const achouStatus = filtroStatus === "" || usuario.status === filtroStatus;
+    return achouNome && achouNivel && achouStatus;
   });
 
-  const editandoAMimMesmo = formulario?.id && formulario.id === meuId;
-
   return (
-    <Layout titulo="Usuários" subtitulo="Contas de acesso da equipe.">
-      <div className="tela-conteudo">
-        <div className="tela-filtros">
-          <input
-            type="text"
-            placeholder="Buscar por nome ou e-mail..."
+    <Layout titulo="Usuários">
+      {erro && <Alert variant="danger">{erro}</Alert>}
+      {sucesso && <Alert variant="success">{sucesso}</Alert>}
+
+      <Row className="mb-3 g-2">
+        <Col md={4}>
+          <Form.Control
+            placeholder="Buscar por nome ou e-mail"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
+        </Col>
+        <Col md={3}>
+          <Form.Select value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)}>
+            <option value="">Todos os níveis</option>
+            <option value="administrador">Administrador</option>
+            <option value="colaborador">Colaborador</option>
+          </Form.Select>
+        </Col>
+        <Col md={2}>
+          <Form.Select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </Form.Select>
+        </Col>
+        <Col className="text-end">
+          <Button onClick={novoUsuario}>Novo usuário</Button>
+        </Col>
+      </Row>
 
-          <select value={nivelFiltro} onChange={(e) => setNivelFiltro(e.target.value)}>
-            <option value="">Nível: Todos</option>
-            {NIVEIS_ACESSO.map((n) => (
-              <option key={n.valor} value={n.valor}>
-                {n.rotulo}
-              </option>
-            ))}
-          </select>
+      <Table bordered hover className="bg-white">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Nível</th>
+            <th>Status</th>
+            <th>Cadastrado em</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuariosFiltrados.map((usuario) => (
+            <tr key={usuario.id_usuario}>
+              <td>
+                {usuario.nome} {usuario.id_usuario === meuId && "(você)"}
+              </td>
+              <td>{usuario.email}</td>
+              <td>{usuario.nivel_acesso === "administrador" ? "Administrador" : "Colaborador"}</td>
+              <td>
+                {usuario.status === "ativo" ? (
+                  <Badge bg="success">Ativo</Badge>
+                ) : (
+                  <Badge bg="secondary">Inativo</Badge>
+                )}
+              </td>
+              <td>{formatarData(usuario.criado_em)}</td>
+              <td>
+                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => abrirEdicao(usuario)}>
+                  Editar
+                </Button>
+                {usuario.id_usuario !== meuId && (
+                  <Button size="sm" variant="outline-secondary" onClick={() => mudarStatus(usuario)}>
+                    {usuario.status === "ativo" ? "Inativar" : "Ativar"}
+                  </Button>
+                )}
+              </td>
+            </tr>
+          ))}
+          {usuariosFiltrados.length === 0 && (
+            <tr>
+              <td colSpan={6} className="text-center text-muted">
+                Nenhum usuário encontrado.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
 
-          <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
-            <option value="">Status: Todos</option>
-            {STATUS_USUARIO.map((s) => (
-              <option key={s.valor} value={s.valor}>
-                {s.rotulo}
-              </option>
-            ))}
-          </select>
-
-          <button className="botao-primario" onClick={abrirNovo}>
-            + Novo usuário
-          </button>
-        </div>
-
-        {erro && <p className="tela-erro">{erro}</p>}
-        {sucesso && <p className="tela-sucesso">{sucesso}</p>}
-
-        {formulario && (
-          <form className="tela-form" onSubmit={salvar}>
-            <h2>{formulario.id ? "Editar usuário" : "Novo usuário"}</h2>
-
-            <label htmlFor="usuario-nome">Nome</label>
-            <input
-              id="usuario-nome"
-              type="text"
-              maxLength={150}
-              value={dados.nome}
-              onChange={(e) => setDados({ ...dados, nome: e.target.value })}
-              required
-            />
-
-            <label htmlFor="usuario-email">E-mail</label>
-            <input
-              id="usuario-email"
-              type="email"
-              maxLength={150}
-              value={dados.email}
-              onChange={(e) => setDados({ ...dados, email: e.target.value })}
-              required
-            />
-
-            {!formulario.id && (
-              <>
-                <label htmlFor="usuario-senha">
-                  Senha inicial (mínimo {SENHA_MINIMA} caracteres)
-                </label>
-                <input
-                  id="usuario-senha"
+      <Modal show={mostrarModal} onHide={() => setMostrarModal(false)}>
+        <Form onSubmit={salvar}>
+          <Modal.Header closeButton>
+            <Modal.Title>{idEditando ? "Editar usuário" : "Novo usuário"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Nome</Form.Label>
+              <Form.Control
+                maxLength={150}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>E-mail</Form.Label>
+              <Form.Control
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Form.Group>
+            {!idEditando && (
+              <Form.Group className="mb-3">
+                <Form.Label>Senha inicial</Form.Label>
+                <Form.Control
                   type="password"
-                  minLength={SENHA_MINIMA}
-                  maxLength={128}
-                  autoComplete="new-password"
-                  value={dados.senha}
-                  onChange={(e) => setDados({ ...dados, senha: e.target.value })}
+                  minLength={8}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   required
                 />
-              </>
+                <Form.Text>Mínimo de 8 caracteres.</Form.Text>
+              </Form.Group>
             )}
-
-            <label htmlFor="usuario-nivel">Nível de acesso</label>
-            <select
-              id="usuario-nivel"
-              value={dados.nivel_acesso}
-              onChange={(e) => setDados({ ...dados, nivel_acesso: e.target.value })}
-              disabled={editandoAMimMesmo}
-            >
-              {NIVEIS_ACESSO.map((n) => (
-                <option key={n.valor} value={n.valor}>
-                  {n.rotulo}
-                </option>
-              ))}
-            </select>
-
-            <div className="tela-form-botoes">
-              <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
+            <Form.Group>
+              <Form.Label>Nível de acesso</Form.Label>
+              <Form.Select
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+                disabled={idEditando === meuId}
               >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="tela-tabela">
-          <div className="tela-tabela-cabecalho" style={COLUNAS}>
-            <span>Nome</span>
-            <span>E-mail</span>
-            <span>Nível</span>
-            <span>Status</span>
-            <span>Desde</span>
-            <span>Ações</span>
-          </div>
-
-          {usuariosFiltrados.map((u) => (
-            <div className="tela-tabela-linha" style={COLUNAS} key={u.id_usuario}>
-              <span>
-                {u.nome}
-                {u.id_usuario === meuId && " (você)"}
-              </span>
-              <span>{u.email}</span>
-              <span>
-                <span className={`selo ${u.nivel_acesso === "administrador" ? "azul" : ""}`}>
-                  {rotulo(NIVEIS_ACESSO, u.nivel_acesso)}
-                </span>
-              </span>
-              <span>
-                <span className={`selo ${u.status === "ativo" ? "verde" : "cinza"}`}>
-                  {rotulo(STATUS_USUARIO, u.status)}
-                </span>
-              </span>
-              <span>{formatarData(u.criado_em)}</span>
-              <span className="acoes">
-                <button onClick={() => abrirEdicao(u)}>Editar</button>
-                {u.id_usuario !== meuId && (
-                  <>
-                    <span>·</span>
-                    <button onClick={() => alternarStatus(u)}>
-                      {u.status === "ativo" ? "Inativar" : "Ativar"}
-                    </button>
-                  </>
-                )}
-              </span>
-            </div>
-          ))}
-
-          {carregando && <p className="tela-vazio">Carregando...</p>}
-
-          {!carregando && usuariosFiltrados.length === 0 && (
-            <p className="tela-vazio">Nenhum usuário encontrado.</p>
-          )}
-        </div>
-      </div>
+                <option value="colaborador">Colaborador</option>
+                <option value="administrador">Administrador</option>
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setMostrarModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </Layout>
   );
 }
