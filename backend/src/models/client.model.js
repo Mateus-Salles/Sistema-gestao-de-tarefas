@@ -8,8 +8,9 @@ async function findAll({ status, limit, offset, viewerId = null }) {
   try {
     const params = [];
     let where = '';
+    const source = status === 'ativa' ? 'vw_clientes_ativos' : 'cliente';
 
-    if (status) {
+    if (status && status !== 'ativa') {
       params.push(status);
       where = `WHERE status = $${params.length}`;
     }
@@ -20,10 +21,10 @@ async function findAll({ status, limit, offset, viewerId = null }) {
       WHERE p.cliente_id = cliente.id_cliente AND (t.responsavel_id = $${params.length} OR t.criador_id = $${params.length})))`;
     where += where ? ` AND ${access}` : `WHERE ${access}`;
 
-    const countResult = await database.query(`SELECT COUNT(*) AS total FROM cliente ${where};`, params);
+    const countResult = await database.query(`SELECT COUNT(*) AS total FROM ${source} AS cliente ${where};`, params);
 
     const { rows } = await database.query(
-      `SELECT ${COLUMNS} FROM cliente ${where}
+      `SELECT ${COLUMNS} FROM ${source} AS cliente ${where}
        ORDER BY nome, id_cliente
        LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
       [...params, limit, offset]
