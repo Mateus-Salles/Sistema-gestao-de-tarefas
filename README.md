@@ -32,7 +32,7 @@ em quatro divisões fixas: Produto, Conteúdo, Tráfego e Disparos.
 
 ## Tecnologias
 
-- **Front-end:** React, Vite, React Router, Axios
+- **Front-end:** React, Vite, React-Bootstrap
 - **Back-end:** Node.js, Express
 - **Banco de dados:** PostgreSQL
 - **Autenticação:** token JWT
