@@ -1,16 +1,38 @@
-# React + Vite
+# Front-end
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Front-end do sistema de gestão de tarefas, feito com React, Vite e React-Bootstrap.
 
-Currently, two official plugins are available:
+## Como rodar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Antes, deixe a API do diretório `backend` rodando.
 
-## React Compiler
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O sistema abre em http://localhost:5173.
 
-## Expanding the ESLint configuration
+No arquivo `.env`, a variável `VITE_API_URL` guarda o endereço da API (padrão: `http://localhost:3000/v1`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Telas
+
+- Login
+- Dashboard
+- Kanban (por projeto, por colaborador e minhas tarefas)
+- Projetos
+- Clientes (administrador)
+- Modelos de lançamento (administrador)
+- Usuários (administrador)
+- Alterar senha
+
+Não tem cadastro público. Os usuários são criados pelo administrador na tela de Usuários.
+
+## Publicação no Cloudflare Pages
+
+- Diretório raiz: `frontend`
+- Comando de build: `npm run build`
+- Diretório de saída: `dist`
+- Variável de ambiente: `VITE_API_URL` com o endereço da API publicada

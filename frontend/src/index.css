@@ -1,39 +1,15 @@
-/* Estilos globais do sistema. Cada tela tem o seu próprio CSS. */
-:root {
-  font-family: Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.4;
-  color: #1f2937;
-  background-color: #f3f4f6;
-  color-scheme: light;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
 body {
-  margin: 0;
+  background-color: #f5f6f8;
 }
 
-#root {
-  min-height: 100vh;
+.coluna-kanban {
+  min-height: 400px;
 }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
+.cartao-tarefa {
+  cursor: pointer;
 }
 
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
+.cartao-tarefa[draggable="true"] {
+  cursor: grab;
 }

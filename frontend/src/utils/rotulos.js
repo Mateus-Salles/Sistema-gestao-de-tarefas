@@ -1,10 +1,8 @@
-// Valores aceitos pela API (docs/openapi.json) e o texto exibido na tela.
-
 export const DIVISOES = [
-  { valor: "produto", rotulo: "Produto" },
-  { valor: "conteudo", rotulo: "Conteúdo" },
-  { valor: "trafego", rotulo: "Tráfego" },
-  { valor: "disparos", rotulo: "Disparos" }
+  { valor: "produto", rotulo: "Produto", cor: "primary" },
+  { valor: "conteudo", rotulo: "Conteúdo", cor: "success" },
+  { valor: "trafego", rotulo: "Tráfego", cor: "warning" },
+  { valor: "disparos", rotulo: "Disparos", cor: "info" }
 ];
 
 export const COLUNAS_KANBAN = [
@@ -14,36 +12,19 @@ export const COLUNAS_KANBAN = [
   { valor: "concluido", rotulo: "Concluído" }
 ];
 
-export const STATUS_CLIENTE = [
-  { valor: "ativa", rotulo: "Ativo" },
-  { valor: "inativa", rotulo: "Inativo" }
-];
-
 export const STATUS_PROJETO = [
   { valor: "andamento", rotulo: "Em andamento" },
   { valor: "concluido", rotulo: "Concluído" },
   { valor: "cancelado", rotulo: "Cancelado" }
 ];
 
-export const STATUS_USUARIO = [
-  { valor: "ativo", rotulo: "Ativo" },
-  { valor: "inativo", rotulo: "Inativo" }
-];
-
-export const NIVEIS_ACESSO = [
-  { valor: "administrador", rotulo: "Administrador" },
-  { valor: "colaborador", rotulo: "Colaborador" }
-];
-
-// Ex.: rotulo(DIVISOES, "trafego") → "Tráfego"
 export function rotulo(lista, valor) {
-  return lista.find((item) => item.valor === valor)?.rotulo || valor || "-";
+  const item = lista.find((i) => i.valor === valor);
+  return item ? item.rotulo : valor;
 }
 
-// "2026-11-20" → "20/11/2026"
 export function formatarData(data) {
   if (!data) return "Sem prazo";
-
-  const [ano, mes, dia] = String(data).slice(0, 10).split("-");
+  const [ano, mes, dia] = data.slice(0, 10).split("-");
   return `${dia}/${mes}/${ano}`;
 }

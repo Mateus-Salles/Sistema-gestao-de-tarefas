@@ -1,285 +1,200 @@
-import { useEffect, useState } from "react"
-import { getClientes, criarCliente, atualizarCliente } from "../services/apiJsonServer"
-import Layout from "../components/Layout"
-import "./Clientes.css"
+import { useEffect, useState } from "react";
+import { Table, Button, Modal, Form, Badge, Alert, Row, Col } from "react-bootstrap";
+import {
+  listarClientes,
+  listarProjetos,
+  criarCliente,
+  editarCliente,
+  alterarStatusCliente,
+  mensagemDeErro
+} from "../services/api";
+import Layout from "../components/Layout";
 
 function Clientes() {
-    const [clientes, setClientes] = useState([])
-    const [busca, setBusca] = useState("")
-    const [statusFiltro, setStatusFiltro] = useState("Todos")
-    const [mostrarFormulario, setMostrarFormulario] = useState(false)
+  const [clientes, setClientes] = useState([]);
+  const [projetos, setProjetos] = useState([]);
+  const [erro, setErro] = useState("");
+  const [atualizar, setAtualizar] = useState(0);
 
-    const [nome, setNome] = useState("")
-    const [email, setEmail] = useState("")
-    const [telefone, setTelefone] = useState("")
-    const [projetos, setProjetos] = useState(0)
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
 
-    useEffect(() => {
-        carregarClientes()
-    }, [])
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
+  const [nome, setNome] = useState("");
+  const [contato, setContato] = useState("");
 
-    async function carregarClientes() {
-        const dados = await getClientes()
-        setClientes(dados)
+  useEffect(() => {
+    async function carregar() {
+      try {
+        setClientes(await listarClientes());
+        setProjetos(await listarProjetos());
+      } catch (error) {
+        setErro(mensagemDeErro(error));
+      }
     }
+    carregar();
+  }, [atualizar]);
 
-    async function adicionarCliente() {
-        if (!nome || !email) {
-            alert("Preencha o nome e o e-mail.")
-            return
-        }
+  function novoCliente() {
+    setIdEditando(null);
+    setNome("");
+    setContato("");
+    setMostrarModal(true);
+  }
 
-        const novoCliente = {
-            nome,
-            email,
-            telefone,
-            projetos: Number(projetos),
-            status: "Ativo"
-        }
+  function abrirEdicao(cliente) {
+    setIdEditando(cliente.id_cliente);
+    setNome(cliente.nome);
+    setContato(cliente.contato);
+    setMostrarModal(true);
+  }
 
-        const clienteCriado = await criarCliente(novoCliente)
+  async function salvar(e) {
+    e.preventDefault();
+    setErro("");
 
-        setClientes([...clientes, clienteCriado])
-
-        setNome("")
-        setEmail("")
-        setTelefone("")
-        setProjetos(0)
-
-        setMostrarFormulario(false)
+    try {
+      if (idEditando) {
+        await editarCliente(idEditando, { nome, contato });
+      } else {
+        await criarCliente({ nome, contato });
+      }
+      setMostrarModal(false);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
+  }
 
-    async function alterarStatus(cliente) {
-        const novoStatus =
-            cliente.status === "Ativo"
-                ? "Inativo"
-                : "Ativo"
+  async function mudarStatus(cliente) {
+    setErro("");
+    const novoStatus = cliente.status === "ativa" ? "inativa" : "ativa";
 
-        const clienteAtualizado = await atualizarCliente(
-            cliente.id,
-            {
-                ...cliente,
-                status: novoStatus
-            }
-        )
-
-        setClientes(
-            clientes.map(item =>
-                item.id === cliente.id
-                    ? clienteAtualizado
-                    : item
-            )
-        )
+    try {
+      await alterarStatusCliente(cliente.id_cliente, novoStatus);
+      setAtualizar(atualizar + 1);
+    } catch (error) {
+      setErro(mensagemDeErro(error));
     }
+  }
 
-    function editarCliente(cliente) {
-        const novoNome = prompt(
-            "Nome do cliente:",
-            cliente.nome
-        )
+  function quantidadeProjetos(idCliente) {
+    return projetos.filter((p) => p.cliente_id === idCliente).length;
+  }
 
-        if (!novoNome) {
-            return
-        }
+  const clientesFiltrados = clientes.filter((cliente) => {
+    const texto = busca.toLowerCase();
+    const achouNome =
+      cliente.nome.toLowerCase().includes(texto) ||
+      cliente.contato.toLowerCase().includes(texto);
+    const achouStatus = filtroStatus === "" || cliente.status === filtroStatus;
+    return achouNome && achouStatus;
+  });
 
-        atualizarCliente(cliente.id, {
-            ...cliente,
-            nome: novoNome
-        }).then(clienteAtualizado => {
-            setClientes(
-                clientes.map(item =>
-                    item.id === cliente.id
-                        ? clienteAtualizado
-                        : item
-                )
-            )
-        })
-    }
+  return (
+    <Layout titulo="Clientes">
+      {erro && <Alert variant="danger">{erro}</Alert>}
 
-    const clientesFiltrados = clientes.filter(cliente => {
+      <Row className="mb-3 g-2">
+        <Col md={5}>
+          <Form.Control
+            placeholder="Buscar por nome ou contato"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </Col>
+        <Col md={3}>
+          <Form.Select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+            <option value="">Todos os status</option>
+            <option value="ativa">Ativo</option>
+            <option value="inativa">Inativo</option>
+          </Form.Select>
+        </Col>
+        <Col className="text-end">
+          <Button onClick={novoCliente}>Novo cliente</Button>
+        </Col>
+      </Row>
 
-        const correspondeBusca =
-            cliente.nome
-                .toLowerCase()
-                .includes(busca.toLowerCase()) ||
-            cliente.email
-                .toLowerCase()
-                .includes(busca.toLowerCase())
-
-        const correspondeStatus =
-            statusFiltro === "Todos" ||
-            cliente.status === statusFiltro
-
-        return correspondeBusca && correspondeStatus
-    })
-
-    return (
-        <Layout titulo="Clientes" subtitulo="Clientes da agência e seus contatos.">
-
-            <div className="clientes-content">
-
-                <div className="clientes-filtros">
-
-                    <input
-                        type="text"
-                        placeholder="Buscar cliente..."
-                        value={busca}
-                        onChange={e => setBusca(e.target.value)}
-                    />
-
-                    <select
-                        value={statusFiltro}
-                        onChange={e => setStatusFiltro(e.target.value)}
-                    >
-                        <option value="Todos">
-                            Status: Todos
-                        </option>
-
-                        <option value="Ativo">
-                            Ativo
-                        </option>
-
-                        <option value="Inativo">
-                            Inativo
-                        </option>
-                    </select>
-
-                    <button
-                        className="novo-cliente-button"
-                        onClick={() => setMostrarFormulario(true)}
-                    >
-                        + Novo cliente
-                    </button>
-
-                </div>
-
-                {mostrarFormulario && (
-
-                    <div className="cliente-form">
-
-                        <h2>Novo cliente</h2>
-
-                        <input
-                            type="text"
-                            placeholder="Nome do cliente"
-                            value={nome}
-                            onChange={e => setNome(e.target.value)}
-                        />
-
-                        <input
-                            type="email"
-                            placeholder="E-mail"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Telefone"
-                            value={telefone}
-                            onChange={e => setTelefone(e.target.value)}
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Quantidade de projetos"
-                            value={projetos}
-                            onChange={e => setProjetos(e.target.value)}
-                        />
-
-                        <div className="cliente-form-buttons">
-
-                            <button
-                                onClick={adicionarCliente}
-                            >
-                                Salvar
-                            </button>
-
-                            <button
-                                onClick={() => setMostrarFormulario(false)}
-                            >
-                                Cancelar
-                            </button>
-
-                        </div>
-
-                    </div>
-
+      <Table bordered hover className="bg-white">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Contato</th>
+            <th>Projetos</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {clientesFiltrados.map((cliente) => (
+            <tr key={cliente.id_cliente}>
+              <td>{cliente.nome}</td>
+              <td>{cliente.contato}</td>
+              <td>{quantidadeProjetos(cliente.id_cliente)}</td>
+              <td>
+                {cliente.status === "ativa" ? (
+                  <Badge bg="success">Ativo</Badge>
+                ) : (
+                  <Badge bg="secondary">Inativo</Badge>
                 )}
+              </td>
+              <td>
+                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => abrirEdicao(cliente)}>
+                  Editar
+                </Button>
+                <Button size="sm" variant="outline-secondary" onClick={() => mudarStatus(cliente)}>
+                  {cliente.status === "ativa" ? "Inativar" : "Ativar"}
+                </Button>
+              </td>
+            </tr>
+          ))}
+          {clientesFiltrados.length === 0 && (
+            <tr>
+              <td colSpan={5} className="text-center text-muted">
+                Nenhum cliente encontrado.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
 
-                <div className="clientes-table">
-
-                    <div className="clientes-table-header">
-
-                        <span>Cliente</span>
-
-                        <span>Contato</span>
-
-                        <span>Projetos</span>
-
-                        <span>Status</span>
-
-                        <span>Ações</span>
-
-                    </div>
-
-                    {clientesFiltrados.map(cliente => (
-
-                        <div
-                            className="clientes-table-row"
-                            key={cliente.id}
-                        >
-
-                            <span>
-                                {cliente.nome}
-                            </span>
-
-                            <span>
-                                {cliente.email}
-                            </span>
-
-                            <span>
-                                {cliente.projetos}
-                            </span>
-
-                            <span>
-                                {cliente.status}
-                            </span>
-
-                            <span className="acoes">
-
-                                <button
-                                    onClick={() =>
-                                        editarCliente(cliente)
-                                    }
-                                >
-                                    Editar
-                                </button>
-
-                                <span>·</span>
-
-                                <button
-                                    onClick={() =>
-                                        alterarStatus(cliente)
-                                    }
-                                >
-                                    {cliente.status === "Ativo"
-                                        ? "Inativar"
-                                        : "Ativar"}
-                                </button>
-
-                            </span>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
-            </div>
-
-        </Layout>
-    )
+      <Modal show={mostrarModal} onHide={() => setMostrarModal(false)}>
+        <Form onSubmit={salvar}>
+          <Modal.Header closeButton>
+            <Modal.Title>{idEditando ? "Editar cliente" : "Novo cliente"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Nome</Form.Label>
+              <Form.Control
+                maxLength={150}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Contato</Form.Label>
+              <Form.Control
+                maxLength={150}
+                placeholder="E-mail, telefone ou nome do responsável"
+                value={contato}
+                onChange={(e) => setContato(e.target.value)}
+                required
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setMostrarModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    </Layout>
+  );
 }
 
-export default Clientes
+export default Clientes;

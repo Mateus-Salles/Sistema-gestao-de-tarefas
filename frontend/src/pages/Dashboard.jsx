@@ -1,129 +1,134 @@
-
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getTarefas, getProjetos } from "../services/apiJsonServer";
-import { getUsuarioLogado } from "../utils/perfil";
+import { Link } from "react-router-dom";
+import { Row, Col, Card, ProgressBar, ListGroup, Alert } from "react-bootstrap";
+import {
+  listarTarefas,
+  listarTarefasAtrasadas,
+  listarProjetos,
+  buscarProgressoProjeto,
+  mensagemDeErro
+} from "../services/api";
+import { getUsuarioLogado, ehAdministrador } from "../services/sessao";
+import { formatarData } from "../utils/rotulos";
 import Layout from "../components/Layout";
-import "./Dashboard.css";
 
 function Dashboard() {
-  const usuario = getUsuarioLogado();
-  const navigate = useNavigate();
+  const admin = ehAdministrador(getUsuarioLogado());
 
   const [tarefas, setTarefas] = useState([]);
+  const [atrasadas, setAtrasadas] = useState([]);
   const [projetos, setProjetos] = useState([]);
-
-  const tipoUsuario = usuario?.tipo_usuario?.trim().toLowerCase();
-  const ehAdministrador = ["administrador", "admin", "dono"].includes(tipoUsuario);
+  const [progresso, setProgresso] = useState({});
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
-    async function carregarDados() {
+    async function carregar() {
       try {
-        const dadosTarefas = await getTarefas(usuario);
-        const dadosProjetos = await getProjetos(usuario);
+        setTarefas(await listarTarefas());
+        setAtrasadas(await listarTarefasAtrasadas());
 
-        setTarefas(dadosTarefas);
-        setProjetos(dadosProjetos);
+        const listaProjetos = await listarProjetos({ status: "andamento" });
+        setProjetos(listaProjetos);
+
+        const porcentagens = {};
+        for (const projeto of listaProjetos) {
+          const dados = await buscarProgressoProjeto(projeto.id_projeto);
+          porcentagens[projeto.id_projeto] = Math.round(Number(dados.percentual_concluido));
+        }
+        setProgresso(porcentagens);
       } catch (error) {
-        console.error("Erro ao carregar dashboard:", error);
+        setErro(mensagemDeErro(error));
       }
     }
-
-    carregarDados();
+    carregar();
   }, []);
 
-  const totalTarefas = tarefas.length;
-  const emAndamento = tarefas.filter(
-    (tarefa) => tarefa.status === "EM ANDAMENTO"
-  ).length;
-  const pendentes = tarefas.filter(
-    (tarefa) => tarefa.status === "A FAZER"
-  ).length;
-  const concluidas = tarefas.filter(
-    (tarefa) => tarefa.status === "CONCLUÍDO"
-  ).length;
-
-  function progressoProjeto(projeto) {
-    const progresso = Number(projeto.progresso);
-    return Math.max(0, Math.min(100, Number.isFinite(progresso) ? progresso : 0));
+  function contar(status) {
+    return tarefas.filter((t) => t.kanban_status === status).length;
   }
 
   return (
-    <Layout
-      titulo="Dashboard"
-      subtitulo="Acompanhe as atividades e os projetos da equipe."
-    >
-        <section className="dashboard-body">
-          <div className="stats">
-            <div className="stat-card">
-              <span>Total de tarefas</span>
-              <strong>{totalTarefas}</strong>
-            </div>
+    <Layout titulo="Dashboard">
+      {erro && <Alert variant="danger">{erro}</Alert>}
 
-            <div className="stat-card">
-              <span>Em andamento</span>
-              <strong>{emAndamento}</strong>
-            </div>
+      <Row className="mb-4 g-3">
+        <Col md>
+          <Card body>
+            <div className="text-muted">{admin ? "Total de tarefas" : "Minhas tarefas"}</div>
+            <h3>{tarefas.length}</h3>
+          </Card>
+        </Col>
+        <Col md>
+          <Card body>
+            <div className="text-muted">A fazer</div>
+            <h3>{contar("a_fazer")}</h3>
+          </Card>
+        </Col>
+        <Col md>
+          <Card body>
+            <div className="text-muted">Em andamento</div>
+            <h3>{contar("em_andamento") + contar("em_revisao")}</h3>
+          </Card>
+        </Col>
+        <Col md>
+          <Card body>
+            <div className="text-muted">Concluídas</div>
+            <h3>{contar("concluido")}</h3>
+          </Card>
+        </Col>
+        <Col md>
+          <Card body>
+            <div className="text-muted">Atrasadas</div>
+            <h3 className={atrasadas.length > 0 ? "text-danger" : ""}>{atrasadas.length}</h3>
+          </Card>
+        </Col>
+      </Row>
 
-            <div className="stat-card">
-              <span>Pendentes</span>
-              <strong>{pendentes}</strong>
-            </div>
-
-            <div className="stat-card">
-              <span>Concluídas</span>
-              <strong>{concluidas}</strong>
-            </div>
-          </div>
-
-          <section className="dashboard-section">
-            <div className="section-heading">
-              <div>
-                <h2>Projetos</h2>
-                <p>Acompanhe o progresso dos projetos.</p>
-              </div>
-
-              <button
-                className="dashboard-action"
-                onClick={() => navigate("/projetos")}
-              >
-                Ver todos
-              </button>
-            </div>
-
-            <div className="dashboard-projects">
-              {projetos.slice(0, 5).map((projeto) => {
-                const progresso = progressoProjeto(projeto);
-
-                return (
-                  <div className="dashboard-project" key={projeto.id}>
-                    <div className="project-info">
-                      <strong>{projeto.nome}</strong>
-                      <span>Cliente: {projeto.cliente || "Não informado"}</span>
-                      <span>Prazo: {projeto.prazo || "Não definido"}</span>
-                    </div>
-
-                    <div className="project-progress">
-                      <span>{progresso}%</span>
-                      <div className="progress-track">
-                        <div
-                          className="progress-fill"
-                          style={{ width: `${progresso}%` }}
-                        />
-                      </div>
-                    </div>
+      <Row className="g-3">
+        <Col md={6}>
+          <Card>
+            <Card.Header>Projetos em andamento</Card.Header>
+            <ListGroup variant="flush">
+              {projetos.map((projeto) => (
+                <ListGroup.Item key={projeto.id_projeto}>
+                  <div className="d-flex justify-content-between">
+                    <strong>{projeto.nome}</strong>
+                    <small className="text-muted">Prazo: {formatarData(projeto.data_final)}</small>
                   </div>
-                );
-              })}
-
+                  <ProgressBar
+                    className="mt-2"
+                    now={progresso[projeto.id_projeto] || 0}
+                    label={`${progresso[projeto.id_projeto] || 0}%`}
+                  />
+                </ListGroup.Item>
+              ))}
               {projetos.length === 0 && (
-                <p className="dashboard-empty">
-                  Nenhum projeto cadastrado.
-                </p>
+                <ListGroup.Item className="text-muted">Nenhum projeto em andamento.</ListGroup.Item>
               )}
-            </div>
-          </section>
-        </section>
+            </ListGroup>
+          </Card>
+        </Col>
+
+        <Col md={6}>
+          <Card>
+            <Card.Header>Tarefas atrasadas</Card.Header>
+            <ListGroup variant="flush">
+              {atrasadas.slice(0, 8).map((tarefa) => (
+                <ListGroup.Item key={tarefa.id_tarefa} className="d-flex justify-content-between">
+                  <span>{tarefa.titulo}</span>
+                  <small className="text-danger">Venceu em {formatarData(tarefa.vencimento)}</small>
+                </ListGroup.Item>
+              ))}
+              {atrasadas.length === 0 && (
+                <ListGroup.Item className="text-muted">Nenhuma tarefa atrasada.</ListGroup.Item>
+              )}
+            </ListGroup>
+            <Card.Footer>
+              <Link to="/tarefas">Abrir Kanban</Link>
+            </Card.Footer>
+          </Card>
+        </Col>
+      </Row>
     </Layout>
   );
 }
