@@ -111,11 +111,14 @@ describe('Database', () => {
       });
       const db = new Database(CONFIG, fake.PoolFake);
 
-      await assert.rejects(() => db.connect(), (erro) => {
-        assert.match(erro.message, /ECONNREFUSED/);
-        assert.doesNotMatch(erro.message, /falha ao encerrar/);
-        return true;
-      });
+      await assert.rejects(
+        () => db.connect(),
+        (erro) => {
+          assert.match(erro.message, /ECONNREFUSED/);
+          assert.doesNotMatch(erro.message, /falha ao encerrar/);
+          return true;
+        },
+      );
     });
 
     it('permite tentar conectar de novo depois de uma falha', async () => {
@@ -177,7 +180,7 @@ describe('Database', () => {
 
       assert.deepEqual(
         ordem.map((o) => o.sql),
-        ['BEGIN', 'callback', 'COMMIT']
+        ['BEGIN', 'callback', 'COMMIT'],
       );
     });
 
@@ -205,12 +208,12 @@ describe('Database', () => {
           db.transaction(async () => {
             throw erroOriginal;
           }),
-        (erro) => erro === erroOriginal
+        (erro) => erro === erroOriginal,
       );
 
       assert.deepEqual(
         ordem.map((o) => o.sql),
-        ['BEGIN', 'ROLLBACK']
+        ['BEGIN', 'ROLLBACK'],
       );
       assert.equal(client.release.mock.callCount(), 1);
     });
@@ -227,7 +230,7 @@ describe('Database', () => {
 
       assert.deepEqual(
         ordem.map((o) => o.sql),
-        ['BEGIN', SQL_SET_CONFIG, 'callback', 'COMMIT']
+        ['BEGIN', SQL_SET_CONFIG, 'callback', 'COMMIT'],
       );
       assert.deepEqual(ordem[1].params, ['7']);
     });
@@ -266,10 +269,7 @@ describe('Database', () => {
           const { db, pool } = await criarConectado();
           const callback = mock.fn(async () => {});
 
-          await assert.rejects(
-            () => db.transactionAsUser(invalido, callback),
-            'usuarioId inválido'
-          );
+          await assert.rejects(() => db.transactionAsUser(invalido, callback), 'usuarioId inválido');
 
           assert.equal(pool.connect.mock.callCount(), 0);
           assert.equal(callback.mock.callCount(), 0);

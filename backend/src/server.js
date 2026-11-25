@@ -1,6 +1,8 @@
 import { app } from './app.js';
 import database from './database/index.js';
 import { getJwtConfig } from './configs/jwt.config.js';
+import userModel from './models/user.model.js';
+import { hashPass } from './utils/Password.js';
 
 const PORT = Number(process.env.APP_PORT) || 3000;
 
@@ -9,12 +11,28 @@ async function start() {
     getJwtConfig();
 
     await database.connect();
+
+    const adminPassword = process.env.ADMIN_INICIAL_SENHA;
+    if (adminPassword) {
+      if (adminPassword.length < 8 || adminPassword.length > 128 || !adminPassword.trim()) {
+        throw new Error(
+          'ADMIN_INICIAL_SENHA deve ter de 8 a 128 caracteres e não pode conter apenas espaços',
+        );
+      }
+
+      const adminHash = await hashPass(adminPassword);
+      if (await userModel.seedInitialAdmin(adminHash)) {
+        console.log('[server] administrador inicial criado.');
+      }
+    }
   } catch (err) {
     console.error('[server] falha ao iniciar:', err.message);
     process.exit(1);
   }
 
-  const server = app.listen(PORT, () => { console.log(`[server] rodando na porta ${PORT}`) });
+  const server = app.listen(PORT, () => {
+    console.log(`[server] rodando na porta ${PORT}`);
+  });
 
   const stop = (sinal) => {
     console.log(`[server] ${sinal} recebido, encerrando...`);

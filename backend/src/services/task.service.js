@@ -1,4 +1,3 @@
-import database from '../database/index.js';
 import taskModel from '../models/task.model.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -43,36 +42,30 @@ async function create(user, fields) {
 }
 
 async function update(user, id, fields) {
-  return database.transaction(async (client) => {
-    const task = requireTask(await taskModel.findById(id, client, true));
+  return taskModel.update(id, fields, (lockedTask) => {
+    const task = requireTask(lockedTask);
     requireVisibility(user, task);
     if (!isAdmin(user) && task.responsavel_id !== null && task.responsavel_id !== user.id) {
       throw new AppError('Somente o responsável ou um administrador pode editar uma tarefa atribuída', 403);
     }
-    return taskModel.update(client, id, fields);
   });
 }
 
 async function assign(id, responsavelId) {
-  return database.transaction(async (client) => {
-    requireTask(await taskModel.findById(id, client, true));
-    await taskModel.requireAssignee(client, responsavelId);
-    return taskModel.update(client, id, { responsavel_id: responsavelId });
-  });
+  return taskModel.assign(id, responsavelId);
 }
 
 async function move(user, id, status) {
-  return database.transactionAsUser(user.id, async (client) => {
-    const task = requireTask(await taskModel.findById(id, client, true));
+  return taskModel.move(user.id, id, status, (lockedTask) => {
+    const task = requireTask(lockedTask);
     if (!isAdmin(user) && task.responsavel_id !== user.id) {
       throw new AppError('Somente o responsável ou um administrador pode mover a tarefa', 403);
     }
-    return taskModel.update(client, id, { kanban_status: status });
   });
 }
 
 async function remove(user, id) {
-  if (!await taskModel.remove(user.id, id)) throw new AppError('Tarefa não encontrada', 404);
+  if (!(await taskModel.remove(user.id, id))) throw new AppError('Tarefa não encontrada', 404);
 }
 
 export default { list, listOverdue, getById, create, update, assign, move, remove };

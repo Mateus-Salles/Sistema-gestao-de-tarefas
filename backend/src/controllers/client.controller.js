@@ -56,4 +56,4 @@ async function updateStatus(req, res, next) {
   }
 }
 
-export default { list, getById, create, update, updateStatus };
+export { list, getById, create, update, updateStatus };

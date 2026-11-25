@@ -1,13 +1,13 @@
 import express from 'express';
 import helmet from 'helmet';
 
-import routes from './routes/index.js'
+import routes from './routes/index.js';
 import { AppError } from './utils/AppError.js';
 
 const API_PREFIX = '/v1';
 const DEFAULT_CORS_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173';
 const corsOrigins = new Set(
-  (process.env.CORS_ORIGINS ?? DEFAULT_CORS_ORIGINS).split(',').map(origin => origin.trim())
+  (process.env.CORS_ORIGINS ?? DEFAULT_CORS_ORIGINS).split(',').map((origin) => origin.trim()),
 );
 
 const app = express();

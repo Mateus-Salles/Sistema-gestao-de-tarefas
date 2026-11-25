@@ -1,4 +1,4 @@
-import * as projectModel from '../models/project.model.js';
+import projectModel from '../models/project.model.js';
 import { AppError } from '../utils/AppError.js';
 
 function requireProject(project) {
@@ -8,7 +8,7 @@ function requireProject(project) {
 }
 
 async function list(query, user) {
-  const viewerId = user.accessLevel === "administrador" ? null : user.id;
+  const viewerId = user.accessLevel === 'administrador' ? null : user.id;
   const { rows, total } = await projectModel.findAll(query, viewerId);
 
   return {
@@ -19,8 +19,8 @@ async function list(query, user) {
 
 async function getById(id, user) {
   const project = requireProject(await projectModel.findById(id));
-  if (user && user.accessLevel !== "administrador" && !await projectModel.hasTasks(id, user.id)) {
-    throw new AppError("Acesso ao projeto proibido", 403);
+  if (user && user.accessLevel !== 'administrador' && !(await projectModel.hasTasks(id, user.id))) {
+    throw new AppError('Acesso ao projeto proibido', 403);
   }
   return project;
 }
@@ -44,4 +44,12 @@ async function getProgress(id, user) {
   return requireProject(await projectModel.findProgress(id));
 }
 
-export default { list, getById, create: projectModel.createProject, update, updateStatus, getKanban, getProgress };
+export default {
+  list,
+  getById,
+  create: projectModel.createProject,
+  update,
+  updateStatus,
+  getKanban,
+  getProgress,
+};

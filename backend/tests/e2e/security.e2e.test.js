@@ -7,18 +7,36 @@ import { loginLimit } from '../../src/middlewares/login-limit.middleware.js';
 describe('Segurança', () => {
   let env;
   let ctx;
-  before(async () => { env = await iniciarAmbiente(); });
-  after(async () => { await env?.encerrar(); });
-  beforeEach(async () => { ctx = await env.preparar(); });
+  before(async () => {
+    env = await iniciarAmbiente();
+  });
+  after(async () => {
+    await env?.encerrar();
+  });
+  beforeEach(async () => {
+    ctx = await env.preparar();
+  });
 
   it('trocar a senha invalida tokens antigos e permite um novo login', async () => {
-    esperar(await env.api.patch('/auth/senha', {
-      senha_atual: SENHA_PADRAO, senha_nova: 'NovaSenha#2026',
-    }, ctx.token.colabA), 204);
+    esperar(
+      await env.api.patch(
+        '/auth/senha',
+        {
+          senha_atual: SENHA_PADRAO,
+          senha_nova: 'NovaSenha#2026',
+        },
+        ctx.token.colabA,
+      ),
+      204,
+    );
     esperar(await env.api.get('/usuarios/me', ctx.token.colabA), 401);
-    const session = esperar(await env.api.post('/auth/login', {
-      email: ctx.colabA.email, senha: 'NovaSenha#2026',
-    }), 200);
+    const session = esperar(
+      await env.api.post('/auth/login', {
+        email: ctx.colabA.email,
+        senha: 'NovaSenha#2026',
+      }),
+      200,
+    );
     esperar(await env.api.get('/usuarios/me', session.token), 200);
   });
 
@@ -36,11 +54,17 @@ describe('Segurança', () => {
 
   it('limita tentativas de login mesmo com cabeçalho de proxy forjado', async (t) => {
     await loginLimit.resetKey('127.0.0.1');
-    t.after(async () => { await loginLimit.resetKey('127.0.0.1'); });
+    t.after(async () => {
+      await loginLimit.resetKey('127.0.0.1');
+    });
     for (let index = 0; index < 30; index++) {
-      esperar(await env.request('POST', '/auth/login', {
-        body: {}, headers: { 'x-forwarded-for': '198.51.100.' + (index + 1) },
-      }), 400);
+      esperar(
+        await env.request('POST', '/auth/login', {
+          body: {},
+          headers: { 'x-forwarded-for': '198.51.100.' + (index + 1) },
+        }),
+        400,
+      );
     }
     const blocked = await env.api.post('/auth/login', { email: ctx.admin.email, senha: SENHA_PADRAO });
     esperar(blocked, 429);

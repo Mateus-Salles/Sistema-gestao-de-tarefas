@@ -51,6 +51,10 @@ CREATE TABLE usuario (
     UNIQUE (email)
 );
 
+CREATE TABLE usuario_perfil_inicial (
+    usuario_id INT PRIMARY KEY REFERENCES usuario(id_usuario) ON DELETE CASCADE
+);
+
 CREATE TABLE tarefa (
     id_tarefa SERIAL PRIMARY KEY,
     projeto_id INT,

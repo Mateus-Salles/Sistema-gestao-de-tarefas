@@ -1,12 +1,12 @@
-import jwt from 'jsonwebtoken';
-import { passwordVersion } from '../utils/session.js';
 import { randomUUID } from 'node:crypto';
+import jwt from 'jsonwebtoken';
 
+import { getJwtConfig } from '../configs/jwt.config.js';
 import authModel from '../models/auth.model.js';
 import userModel from '../models/user.model.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPass, verifyPass } from '../utils/Password.js';
-import { getJwtConfig } from '../configs/jwt.config.js';
+import { passwordVersion } from '../utils/session.js';
 
 const FAKE_HASH = hashPass('fake-password-to-match-time'); // Para não revelar quais e-mails estão cadastrados
 
@@ -24,9 +24,13 @@ function getUserDTO(u) {
 function genToken(user) {
   const { secret, expiresIn } = getJwtConfig();
   return jwt.sign(
-    { sub: String(user.id_usuario), accessLevel: user.nivel_acesso, passwordVersion: passwordVersion(user.senha_hash) },
+    {
+      sub: String(user.id_usuario),
+      accessLevel: user.nivel_acesso,
+      passwordVersion: passwordVersion(user.senha_hash),
+    },
     secret,
-    { algorithm: 'HS256', expiresIn, jwtid: randomUUID() }
+    { algorithm: 'HS256', expiresIn, jwtid: randomUUID() },
   );
 }
 
@@ -43,6 +47,8 @@ async function login(email, password) {
   if (user.status !== 'ativo') {
     throw new AppError('Usuário inativo. Procure um administrador.', 401);
   }
+
+  if (user.perfil_pendente) return { perfil_pendente: true };
 
   return { token: genToken(user), usuario: getUserDTO(user) };
 }
@@ -69,4 +75,25 @@ async function logout(jti, exp) {
   await authModel.clearExpiredTokens();
 }
 
-export default { login, changePassword, logout, getUserDTO };
+async function completeInitialProfile(dados) {
+  await userModel.completeInitialProfile(dados, async (user) => {
+    const hash = user ? user.senha_hash : await FAKE_HASH;
+    const senhaValida = await verifyPass(dados.senha, hash);
+
+    if (!user || !senhaValida) {
+      throw new AppError('Credenciais provisórias inválidas', 401);
+    }
+
+    if (dados.nome.toLowerCase() === user.nome.trim().toLowerCase()) {
+      throw new AppError('Informe um nome diferente do provisório', 400);
+    }
+
+    if (dados.novo_email === user.email.trim().toLowerCase()) {
+      throw new AppError('Informe um e-mail diferente do provisório', 400);
+    }
+
+    return hashPass(dados.nova_senha);
+  });
+}
+
+export default { login, changePassword, logout, getUserDTO, completeInitialProfile };

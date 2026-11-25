@@ -78,7 +78,10 @@ describe('E2E · Tarefas', () => {
 
       const doA = esperar(await env.api.get('/tarefas', ctx.token.colabA), 200);
 
-      assert.deepEqual(ids(doA.dados), [atribuidaAA.id_tarefa, criadaPorA.id_tarefa].sort((a, b) => a - b));
+      assert.deepEqual(
+        ids(doA.dados),
+        [atribuidaAA.id_tarefa, criadaPorA.id_tarefa].sort((a, b) => a - b),
+      );
       assert.equal(doA.paginacao.total, 2);
     });
 
@@ -98,23 +101,36 @@ describe('E2E · Tarefas', () => {
       const projeto = await criarProjeto();
       const outro = await criarProjeto();
       const porDivisao = await tarefasPorDivisao(projeto.id_projeto);
-      const comResp = await criarTarefa({ responsavelId: ctx.colabA.id_usuario, divisao: 'trafego', status: 'em_andamento' });
+      const comResp = await criarTarefa({
+        responsavelId: ctx.colabA.id_usuario,
+        divisao: 'trafego',
+        status: 'em_andamento',
+      });
 
-      const doProjeto = esperar(await env.api.get(`/tarefas?projeto_id=${projeto.id_projeto}`, ctx.token.admin), 200);
+      const doProjeto = esperar(
+        await env.api.get(`/tarefas?projeto_id=${projeto.id_projeto}`, ctx.token.admin),
+        200,
+      );
       assert.equal(doProjeto.dados.length, 4);
       assert.ok(doProjeto.dados.every((t) => t.projeto_id === projeto.id_projeto));
       assert.ok(!doProjeto.dados.some((t) => t.projeto_id === outro.id_projeto));
 
       const porDiv = esperar(
         await env.api.get(`/tarefas?projeto_id=${projeto.id_projeto}&divisao=conteudo`, ctx.token.admin),
-        200
+        200,
       );
       assert.deepEqual(ids(porDiv.dados), [porDivisao.conteudo.id_tarefa]);
 
-      const porResp = esperar(await env.api.get(`/tarefas?responsavel_id=${ctx.colabA.id_usuario}`, ctx.token.admin), 200);
+      const porResp = esperar(
+        await env.api.get(`/tarefas?responsavel_id=${ctx.colabA.id_usuario}`, ctx.token.admin),
+        200,
+      );
       assert.deepEqual(ids(porResp.dados), [comResp.id_tarefa]);
 
-      const porStatus = esperar(await env.api.get('/tarefas?kanban_status=em_andamento', ctx.token.admin), 200);
+      const porStatus = esperar(
+        await env.api.get('/tarefas?kanban_status=em_andamento', ctx.token.admin),
+        200,
+      );
       assert.deepEqual(ids(porStatus.dados), [comResp.id_tarefa]);
     });
 
@@ -148,9 +164,9 @@ describe('E2E · Tarefas', () => {
             divisao: 'conteudo',
             vencimento: '2099-06-30',
           },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        201
+        201,
       );
 
       assert.ok(Number.isInteger(criada.id_tarefa));
@@ -167,8 +183,12 @@ describe('E2E · Tarefas', () => {
 
     it('201 · RF23 — tarefa avulsa (sem projeto_id)', async () => {
       const criada = esperar(
-        await env.api.post('/tarefas', { titulo: 'Ligar para o fornecedor', divisao: 'produto' }, ctx.token.admin),
-        201
+        await env.api.post(
+          '/tarefas',
+          { titulo: 'Ligar para o fornecedor', divisao: 'produto' },
+          ctx.token.admin,
+        ),
+        201,
       );
 
       assert.equal(criada.projeto_id, null);
@@ -180,7 +200,7 @@ describe('E2E · Tarefas', () => {
     it('201 · colaborador cria a própria tarefa; ele e o admin enxergam, o outro colaborador não', async () => {
       const criada = esperar(
         await env.api.post('/tarefas', { titulo: 'Minha anotação', divisao: 'disparos' }, ctx.token.colabA),
-        201
+        201,
       );
 
       assert.equal(criada.criador_id, ctx.colabA.id_usuario);
@@ -194,8 +214,12 @@ describe('E2E · Tarefas', () => {
       const ontem = await dataRelativa(-1);
 
       const criada = esperar(
-        await env.api.post('/tarefas', { titulo: 'Já nasceu atrasada', divisao: 'produto', vencimento: ontem }, ctx.token.admin),
-        201
+        await env.api.post(
+          '/tarefas',
+          { titulo: 'Já nasceu atrasada', divisao: 'produto', vencimento: ontem },
+          ctx.token.admin,
+        ),
+        201,
       );
 
       assert.equal(criada.atrasada, true);
@@ -205,7 +229,7 @@ describe('E2E · Tarefas', () => {
       const res = await env.api.post(
         '/tarefas',
         { titulo: 'X', divisao: 'produto', responsavel_id: ctx.admin.id_usuario },
-        ctx.token.admin
+        ctx.token.admin,
       );
 
       esperar(res, 403);
@@ -229,14 +253,21 @@ describe('E2E · Tarefas', () => {
       const amanha = await dataRelativa(1);
 
       const atrasada = await criarTarefa({ titulo: 'Atrasada', vencimento: ontem });
-      const emAndamento = await criarTarefa({ titulo: 'Atrasada em andamento', vencimento: ontem, status: 'em_andamento' });
+      const emAndamento = await criarTarefa({
+        titulo: 'Atrasada em andamento',
+        vencimento: ontem,
+        status: 'em_andamento',
+      });
       await criarTarefa({ titulo: 'Atrasada mas concluída', vencimento: ontem, status: 'concluido' });
       await criarTarefa({ titulo: 'No prazo', vencimento: amanha });
       await criarTarefa({ titulo: 'Sem prazo' });
 
       const lista = esperar(await env.api.get('/tarefas/atrasadas', ctx.token.admin), 200);
 
-      assert.deepEqual(ids(lista), [atrasada.id_tarefa, emAndamento.id_tarefa].sort((a, b) => a - b));
+      assert.deepEqual(
+        ids(lista),
+        [atrasada.id_tarefa, emAndamento.id_tarefa].sort((a, b) => a - b),
+      );
       assert.ok(lista.every((t) => t.atrasada === true));
     });
 
@@ -309,9 +340,9 @@ describe('E2E · Tarefas', () => {
         await env.api.patch(
           `/tarefas/${t.id_tarefa}`,
           { titulo: 'Depois', descricao: 'Agora com detalhes', divisao: 'trafego', vencimento: '2099-01-15' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editada.titulo, 'Depois');
@@ -323,7 +354,10 @@ describe('E2E · Tarefas', () => {
     it('200 · atualização parcial mantém o restante e atualiza atualizado_em', async () => {
       const t = await criarTarefa({ titulo: 'Original', divisao: 'conteudo' });
 
-      const editada = esperar(await env.api.patch(`/tarefas/${t.id_tarefa}`, { titulo: 'Só o título' }, ctx.token.admin), 200);
+      const editada = esperar(
+        await env.api.patch(`/tarefas/${t.id_tarefa}`, { titulo: 'Só o título' }, ctx.token.admin),
+        200,
+      );
 
       assert.equal(editada.titulo, 'Só o título');
       assert.equal(editada.divisao, 'conteudo');
@@ -333,7 +367,10 @@ describe('E2E · Tarefas', () => {
     it('200 · permite limpar o prazo (vencimento: null)', async () => {
       const t = await criarTarefa({ vencimento: '2099-01-01' });
 
-      const editada = esperar(await env.api.patch(`/tarefas/${t.id_tarefa}`, { vencimento: null }, ctx.token.admin), 200);
+      const editada = esperar(
+        await env.api.patch(`/tarefas/${t.id_tarefa}`, { vencimento: null }, ctx.token.admin),
+        200,
+      );
 
       assert.equal(editada.vencimento, null);
     });
@@ -341,31 +378,77 @@ describe('E2E · Tarefas', () => {
     it('200 · o criador colaborador edita a própria tarefa', async () => {
       const t = await criarTarefa({ criadorId: ctx.colabA.id_usuario });
 
-      esperar(await env.api.patch(`/tarefas/${t.id_tarefa}`, { titulo: 'Editada por mim' }, ctx.token.colabA), 200);
+      esperar(
+        await env.api.patch(`/tarefas/${t.id_tarefa}`, { titulo: 'Editada por mim' }, ctx.token.colabA),
+        200,
+      );
     });
 
     it('criador mantém somente leitura quando o administrador atribui a tarefa a outro colaborador', async () => {
-      const criada = esperar(await env.api.post('/tarefas', {
-        titulo: 'Original', divisao: 'produto', responsavel_id: ctx.colabA.id_usuario,
-      }, ctx.token.colabA), 201);
+      const criada = esperar(
+        await env.api.post(
+          '/tarefas',
+          {
+            titulo: 'Original',
+            divisao: 'produto',
+            responsavel_id: ctx.colabA.id_usuario,
+          },
+          ctx.token.colabA,
+        ),
+        201,
+      );
       const path = `/tarefas/${criada.id_tarefa}`;
-      esperar(await env.api.patch(`${path}/responsavel`, {
-        responsavel_id: ctx.colabB.id_usuario,
-      }, ctx.token.admin), 200);
+      esperar(
+        await env.api.patch(
+          `${path}/responsavel`,
+          {
+            responsavel_id: ctx.colabB.id_usuario,
+          },
+          ctx.token.admin,
+        ),
+        200,
+      );
 
       esperar(await env.api.get(path, ctx.token.colabA), 200);
-      esperar(await env.api.patch(path, {
-        titulo: 'Tentativa', descricao: 'Tentativa', divisao: 'trafego', vencimento: '2099-01-01',
-      }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(
+          path,
+          {
+            titulo: 'Tentativa',
+            descricao: 'Tentativa',
+            divisao: 'trafego',
+            vencimento: '2099-01-01',
+          },
+          ctx.token.colabA,
+        ),
+        403,
+      );
       esperar(await env.api.patch(`${path}/status`, { kanban_status: 'concluido' }, ctx.token.colabA), 403);
-      esperar(await env.api.patch(`${path}/responsavel`, { responsavel_id: ctx.colabA.id_usuario }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(
+          `${path}/responsavel`,
+          { responsavel_id: ctx.colabA.id_usuario },
+          ctx.token.colabA,
+        ),
+        403,
+      );
       esperar(await env.api.delete(path, ctx.token.colabA), 403);
       assert.equal(esperar(await env.api.get(path, ctx.token.admin), 200).titulo, 'Original');
 
       esperar(await env.api.patch(path, { titulo: 'Editada por B' }, ctx.token.colabB), 200);
-      esperar(await env.api.patch(`${path}/status`, { kanban_status: 'em_andamento' }, ctx.token.colabB), 200);
+      esperar(
+        await env.api.patch(`${path}/status`, { kanban_status: 'em_andamento' }, ctx.token.colabB),
+        200,
+      );
       esperar(await env.api.patch(path, { titulo: 'Editada pelo administrador' }, ctx.token.admin), 200);
-      esperar(await env.api.patch(`${path}/responsavel`, { responsavel_id: ctx.colabA.id_usuario }, ctx.token.admin), 200);
+      esperar(
+        await env.api.patch(
+          `${path}/responsavel`,
+          { responsavel_id: ctx.colabA.id_usuario },
+          ctx.token.admin,
+        ),
+        200,
+      );
       esperar(await env.api.patch(path, { titulo: 'Responsável novamente' }, ctx.token.colabA), 200);
     });
 
@@ -376,9 +459,9 @@ describe('E2E · Tarefas', () => {
         await env.api.patch(
           `/tarefas/${t.id_tarefa}`,
           { titulo: 'X', responsavel_id: ctx.colabB.id_usuario, kanban_status: 'concluido' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editada.responsavel_id, ctx.colabA.id_usuario);
@@ -388,7 +471,10 @@ describe('E2E · Tarefas', () => {
     it('400 · divisão inválida', async () => {
       const t = await criarTarefa();
 
-      esperar(await env.api.patch(`/tarefas/${t.id_tarefa}`, { divisao: 'inexistente' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(`/tarefas/${t.id_tarefa}`, { divisao: 'inexistente' }, ctx.token.admin),
+        400,
+      );
     });
 
     it('403 · colaborador sem relação com a tarefa não pode editá-la', async () => {
@@ -418,7 +504,10 @@ describe('E2E · Tarefas', () => {
 
       esperar(await env.api.get(`/tarefas/${porDivisao.produto.id_tarefa}`, ctx.token.admin), 404);
 
-      const progresso = esperar(await env.api.get(`/projetos/${projeto.id_projeto}/progresso`, ctx.token.admin), 200);
+      const progresso = esperar(
+        await env.api.get(`/projetos/${projeto.id_projeto}/progresso`, ctx.token.admin),
+        200,
+      );
       assert.equal(progresso.total_tarefas, 3);
     });
 
@@ -441,8 +530,12 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa();
 
       const body = esperar(
-        await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: ctx.colabA.id_usuario }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: ctx.colabA.id_usuario },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(body.id_tarefa, t.id_tarefa);
@@ -456,8 +549,12 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa({ responsavelId: ctx.colabA.id_usuario });
 
       esperar(
-        await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: ctx.colabB.id_usuario }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: ctx.colabB.id_usuario },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       const paraA = esperar(await env.api.get('/tarefas', ctx.token.colabA), 200);
@@ -470,8 +567,12 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa();
 
       esperar(
-        await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: ctx.admin.id_usuario }, ctx.token.admin),
-        403
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: ctx.admin.id_usuario },
+          ctx.token.admin,
+        ),
+        403,
       );
     });
 
@@ -479,8 +580,12 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa({ criadorId: ctx.colabA.id_usuario });
 
       esperar(
-        await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: ctx.colabB.id_usuario }, ctx.token.colabA),
-        403
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: ctx.colabB.id_usuario },
+          ctx.token.colabA,
+        ),
+        403,
       );
     });
 
@@ -489,8 +594,12 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa();
 
       esperar(
-        await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: inativo.id_usuario }, ctx.token.admin),
-        409
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: inativo.id_usuario },
+          ctx.token.admin,
+        ),
+        409,
       );
     });
 
@@ -498,7 +607,14 @@ describe('E2E · Tarefas', () => {
       const t = await criarTarefa();
 
       esperar(await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, {}, ctx.token.admin), 400);
-      esperar(await env.api.patch(`/tarefas/${t.id_tarefa}/responsavel`, { responsavel_id: 'abc' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(
+          `/tarefas/${t.id_tarefa}/responsavel`,
+          { responsavel_id: 'abc' },
+          ctx.token.admin,
+        ),
+        400,
+      );
     });
 
     it('401 · sem token', async () => {

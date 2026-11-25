@@ -110,14 +110,17 @@ describe('E2E · Usuários', () => {
     it('201 · permite criar outro administrador', async () => {
       const criado = esperar(
         await env.api.post('/usuarios', novoUsuario({ nivel_acesso: 'administrador' }), ctx.token.admin),
-        201
+        201,
       );
 
       assert.equal(criado.nivel_acesso, 'administrador');
     });
 
     it('409 · e-mail já cadastrado', async () => {
-      esperar(await env.api.post('/usuarios', novoUsuario({ email: 'caio@forge.test' }), ctx.token.admin), 409);
+      esperar(
+        await env.api.post('/usuarios', novoUsuario({ email: 'caio@forge.test' }), ctx.token.admin),
+        409,
+      );
     });
 
     it('400 · dados inválidos (e-mail, nível de acesso ou campos ausentes)', async () => {
@@ -184,9 +187,9 @@ describe('E2E · Usuários', () => {
         await env.api.patch(
           `/usuarios/${id}`,
           { nome: 'Caio Renomeado', email: 'caio.novo@forge.test', nivel_acesso: 'administrador' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editado.nome, 'Caio Renomeado');
@@ -199,8 +202,12 @@ describe('E2E · Usuários', () => {
 
     it('200 · atualização parcial mantém os demais campos', async () => {
       const editado = esperar(
-        await env.api.patch(`/usuarios/${ctx.colabA.id_usuario}`, { nome: 'Só o nome mudou' }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/usuarios/${ctx.colabA.id_usuario}`,
+          { nome: 'Só o nome mudou' },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(editado.nome, 'Só o nome mudou');
@@ -219,12 +226,15 @@ describe('E2E · Usuários', () => {
     it('400 · e-mail inválido', async () => {
       esperar(
         await env.api.patch(`/usuarios/${ctx.colabA.id_usuario}`, { email: 'invalido' }, ctx.token.admin),
-        400
+        400,
       );
     });
 
     it('403 · colaborador não pode editar usuários', async () => {
-      esperar(await env.api.patch(`/usuarios/${ctx.colabB.id_usuario}`, { nome: 'X' }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(`/usuarios/${ctx.colabB.id_usuario}`, { nome: 'X' }, ctx.token.colabA),
+        403,
+      );
     });
 
     it('404 · usuário inexistente', async () => {
@@ -241,7 +251,10 @@ describe('E2E · Usuários', () => {
     it('200 · inativa o usuário: login e token antigo deixam de funcionar', async () => {
       const id = ctx.colabA.id_usuario;
 
-      const inativado = esperar(await env.api.patch(`/usuarios/${id}/status`, { status: 'inativo' }, ctx.token.admin), 200);
+      const inativado = esperar(
+        await env.api.patch(`/usuarios/${id}/status`, { status: 'inativo' }, ctx.token.admin),
+        200,
+      );
       assert.equal(inativado.status, 'inativo');
 
       esperar(await env.api.post('/auth/login', { email: 'caio@forge.test', senha: SENHA_PADRAO }), 401);
@@ -252,7 +265,10 @@ describe('E2E · Usuários', () => {
       const id = ctx.colabA.id_usuario;
 
       await env.api.patch(`/usuarios/${id}/status`, { status: 'inativo' }, ctx.token.admin);
-      const reativado = esperar(await env.api.patch(`/usuarios/${id}/status`, { status: 'ativo' }, ctx.token.admin), 200);
+      const reativado = esperar(
+        await env.api.patch(`/usuarios/${id}/status`, { status: 'ativo' }, ctx.token.admin),
+        200,
+      );
 
       assert.equal(reativado.status, 'ativo');
       esperar(await env.api.post('/auth/login', { email: 'caio@forge.test', senha: SENHA_PADRAO }), 200);
@@ -270,15 +286,23 @@ describe('E2E · Usuários', () => {
 
     it('400 · status inválido', async () => {
       esperar(
-        await env.api.patch(`/usuarios/${ctx.colabA.id_usuario}/status`, { status: 'suspenso' }, ctx.token.admin),
-        400
+        await env.api.patch(
+          `/usuarios/${ctx.colabA.id_usuario}/status`,
+          { status: 'suspenso' },
+          ctx.token.admin,
+        ),
+        400,
       );
     });
 
     it('403 · colaborador não pode alterar status de usuários', async () => {
       esperar(
-        await env.api.patch(`/usuarios/${ctx.colabB.id_usuario}/status`, { status: 'inativo' }, ctx.token.colabA),
-        403
+        await env.api.patch(
+          `/usuarios/${ctx.colabB.id_usuario}/status`,
+          { status: 'inativo' },
+          ctx.token.colabA,
+        ),
+        403,
       );
     });
 

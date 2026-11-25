@@ -81,8 +81,12 @@ describe('E2E · Clientes', () => {
   describe('POST /clientes (RF06, RN04)', () => {
     it('201 · administrador cadastra cliente, que nasce "ativa"', async () => {
       const criado = esperar(
-        await env.api.post('/clientes', { nome: 'Nova Cliente', contato: 'contato@nova.com' }, ctx.token.admin),
-        201
+        await env.api.post(
+          '/clientes',
+          { nome: 'Nova Cliente', contato: 'contato@nova.com' },
+          ctx.token.admin,
+        ),
+        201,
       );
 
       assert.ok(Number.isInteger(criado.id_cliente));
@@ -137,8 +141,12 @@ describe('E2E · Clientes', () => {
       const c = await criarCliente({ nome: 'Antes' });
 
       const editado = esperar(
-        await env.api.patch(`/clientes/${c.id_cliente}`, { nome: 'Depois', contato: 'novo@contato.com' }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/clientes/${c.id_cliente}`,
+          { nome: 'Depois', contato: 'novo@contato.com' },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(editado.nome, 'Depois');
@@ -151,7 +159,7 @@ describe('E2E · Clientes', () => {
 
       const editado = esperar(
         await env.api.patch(`/clientes/${c.id_cliente}`, { contato: 'mudou@contato.com' }, ctx.token.admin),
-        200
+        200,
       );
 
       assert.equal(editado.nome, 'Mantido');
@@ -162,8 +170,12 @@ describe('E2E · Clientes', () => {
       const c = await criarCliente();
 
       const editado = esperar(
-        await env.api.patch(`/clientes/${c.id_cliente}`, { nome: 'Novo nome', status: 'inativa' }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/clientes/${c.id_cliente}`,
+          { nome: 'Novo nome', status: 'inativa' },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(editado.status, 'ativa');
@@ -191,13 +203,13 @@ describe('E2E · Clientes', () => {
 
       const inativada = esperar(
         await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'inativa' }, ctx.token.admin),
-        200
+        200,
       );
       assert.equal(inativada.status, 'inativa');
 
       const reativada = esperar(
         await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'ativa' }, ctx.token.admin),
-        200
+        200,
       );
       assert.equal(reativada.status, 'ativa');
     });
@@ -223,13 +235,19 @@ describe('E2E · Clientes', () => {
     it('400 · status inválido', async () => {
       const c = await criarCliente();
 
-      esperar(await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'pausada' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'pausada' }, ctx.token.admin),
+        400,
+      );
     });
 
     it('403 · colaborador não pode alterar o status', async () => {
       const c = await criarCliente();
 
-      esperar(await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'inativa' }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(`/clientes/${c.id_cliente}/status`, { status: 'inativa' }, ctx.token.colabA),
+        403,
+      );
     });
 
     it('404 · cliente inexistente', async () => {

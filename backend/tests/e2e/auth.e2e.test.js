@@ -2,6 +2,8 @@ import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
+import userModel from '../../src/models/user.model.js';
+import { hashPass } from '../../src/utils/Password.js';
 
 import {
   iniciarAmbiente,
@@ -35,7 +37,7 @@ describe('E2E · Autenticação', () => {
     it('200 · devolve token JWT e os dados do usuário, sem expor senha/hash', async () => {
       const body = esperar(
         await env.api.post('/auth/login', { email: 'admin@forge.test', senha: SENHA_PADRAO }),
-        200
+        200,
       );
 
       assert.equal(typeof body.token, 'string');
@@ -65,7 +67,7 @@ describe('E2E · Autenticação', () => {
     it('200 · o token devolvido autentica as demais rotas', async () => {
       const { token } = esperar(
         await env.api.post('/auth/login', { email: 'caio@forge.test', senha: SENHA_PADRAO }),
-        200
+        200,
       );
 
       const me = esperar(await env.api.get('/usuarios/me', token), 200);
@@ -108,6 +110,63 @@ describe('E2E · Autenticação', () => {
   });
 
   /* ---------------------------------------------------------------- */
+  describe('POST /auth/perfil-inicial', () => {
+    const credenciais = { email: 'admin@email.com', senha: SENHA_PADRAO };
+    const perfil = {
+      ...credenciais,
+      nome: 'Primeiro Administrador',
+      novo_email: 'Administrador@forge.test',
+      nova_senha: 'NovaSenha@123',
+    };
+
+    beforeEach(async () => {
+      await consultar('DELETE FROM usuario WHERE id_usuario = $1', [ctx.admin.id_usuario]);
+      assert.equal(await userModel.seedInitialAdmin(await hashPass(credenciais.senha)), true);
+    });
+
+    it('bloqueia o login provisório, conclui o perfil e libera somente as novas credenciais', async () => {
+      const bloqueio = esperar(await env.api.post('/auth/login', credenciais), 403);
+      assert.equal(bloqueio.codigo, 'PERFIL_PENDENTE');
+      assert.equal('token' in bloqueio, false);
+
+      const resposta = await env.api.post('/auth/perfil-inicial', perfil);
+      esperar(resposta, 204);
+      assert.equal(resposta.texto, '');
+      assert.deepEqual(await consultar('SELECT usuario_id FROM usuario_perfil_inicial'), []);
+
+      esperar(await env.api.post('/auth/login', credenciais), 401);
+      esperar(await env.api.post('/auth/perfil-inicial', perfil), 401);
+
+      const { token, usuario } = esperar(
+        await env.api.post('/auth/login', { email: perfil.novo_email, senha: perfil.nova_senha }),
+        200,
+      );
+      assert.equal(usuario.nome, perfil.nome);
+      assert.equal(usuario.email, perfil.novo_email.toLowerCase());
+      assert.equal(usuario.nivel_acesso, 'administrador');
+      assert.equal(esperar(await env.api.get('/usuarios/me', token), 200).id_usuario, usuario.id_usuario);
+    });
+
+    it('rejeita credenciais provisórias inválidas e exige a alteração dos três campos', async () => {
+      esperar(await env.api.post('/auth/perfil-inicial', { ...perfil, senha: 'senha incorreta' }), 401);
+      esperar(await env.api.post('/auth/perfil-inicial', { ...perfil, nome: ' ADMIN ' }), 400);
+      esperar(await env.api.post('/auth/perfil-inicial', { ...perfil, novo_email: 'ADMIN@email.com' }), 400);
+      esperar(await env.api.post('/auth/perfil-inicial', { ...perfil, nova_senha: credenciais.senha }), 400);
+      assert.equal(esperar(await env.api.post('/auth/login', credenciais), 403).codigo, 'PERFIL_PENDENTE');
+    });
+
+    it('preserva os dados provisórios e a pendência quando o novo e-mail já existe', async () => {
+      esperar(await env.api.post('/auth/perfil-inicial', { ...perfil, novo_email: ctx.colabA.email }), 409);
+
+      const [admin] = await consultar(
+        'SELECT nome, email FROM usuario JOIN usuario_perfil_inicial ON usuario_id = id_usuario',
+      );
+      assert.deepEqual(admin, { nome: 'admin', email: credenciais.email });
+      assert.equal(esperar(await env.api.post('/auth/login', credenciais), 403).codigo, 'PERFIL_PENDENTE');
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
   describe('POST /auth/logout', () => {
     it('204 · revoga o token: ele deixa de funcionar e o jti fica registrado', async () => {
       const jti = randomUUID();
@@ -120,7 +179,10 @@ describe('E2E · Autenticação', () => {
       assert.equal(res.texto, '');
 
       const revogados = await consultar('SELECT jti FROM token_revogado');
-      assert.deepEqual(revogados.map((r) => r.jti), [jti]);
+      assert.deepEqual(
+        revogados.map((r) => r.jti),
+        [jti],
+      );
 
       const depois = await env.api.get('/usuarios/me', token);
       assert.equal(esperar(depois, 401).erro, 'Token revogado');
@@ -159,7 +221,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: NOVA },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
       assert.equal(res.status, 204);
 
@@ -185,7 +247,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: 'nao-e-essa-aqui', senha_nova: NOVA },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       assert.equal(esperar(res, 401).erro, 'Senha atual incorreta');
@@ -196,7 +258,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: SENHA_PADRAO },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       esperar(res, 400);
@@ -206,7 +268,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: 'curta' },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       esperar(res, 400);
@@ -269,7 +331,11 @@ describe('E2E · Autenticação', () => {
     });
 
     it('401 · token de usuário que não existe mais', async () => {
-      const fantasma = gerarToken({ id_usuario: 999999, nivel_acesso: 'administrador', senha_hash: 'hash-do-usuario-inexistente' });
+      const fantasma = gerarToken({
+        id_usuario: 999999,
+        nivel_acesso: 'administrador',
+        senha_hash: 'hash-do-usuario-inexistente',
+      });
 
       esperar(await env.api.get(rota, fantasma), 401);
     });

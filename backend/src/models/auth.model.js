@@ -1,6 +1,5 @@
+import database from '../database/index.js';
 import { AppError } from '../utils/AppError.js';
-
-import database from "../database/index.js";
 
 async function revokeToken(jti, expiresIn) {
   let client;
@@ -8,8 +7,11 @@ async function revokeToken(jti, expiresIn) {
   try {
     client = await database.getClient();
 
-    await client.query('INSERT INTO token_revogado (jti, expira_em) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING;', [jti, expiresIn]);
-  } catch(err) {
+    await client.query(
+      'INSERT INTO token_revogado (jti, expira_em) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING;',
+      [jti, expiresIn],
+    );
+  } catch (err) {
     console.error('[auth.model] revokeToken: ', err);
 
     throw new AppError('Erro ao revogar o token', 500);
@@ -27,7 +29,7 @@ async function isRevoked(jti) {
     const { rowCount } = await client.query('SELECT 1 FROM token_revogado WHERE jti = $1;', [jti]);
 
     return rowCount > 0;
-  } catch(err) {
+  } catch (err) {
     console.error('[auth.model] isRevoked: ', err);
 
     throw new AppError('Erro ao verificar o token', 500);
@@ -43,7 +45,7 @@ async function clearExpiredTokens() {
     client = await database.getClient();
 
     await client.query('DELETE FROM token_revogado WHERE expira_em < NOW();');
-  } catch(err) {
+  } catch (err) {
     console.error('[auth.model] clearExpiredTokens: ', err);
 
     throw new AppError('Erro ao limpar tokens expirados', 500);
