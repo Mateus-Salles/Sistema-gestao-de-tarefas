@@ -10,7 +10,7 @@ function visibleClient(client, user) {
 async function list({ status, page, pageSize }, user) {
   const offset = (page - 1) * pageSize;
 
-  const viewerId = user && user.accessLevel !== "administrador" ? user.id : null;
+  const viewerId = user && user.accessLevel !== 'administrador' ? user.id : null;
   const { rows, total } = await clientModel.findAll({ status, limit: pageSize, offset, viewerId });
 
   return {
@@ -24,7 +24,7 @@ async function getById(clientId, user) {
 
   if (!client) throw new AppError('Cliente não encontrado', 404);
 
-  if (user && user.accessLevel !== 'administrador' && !await clientModel.hasProjects(clientId, user.id)) {
+  if (user && user.accessLevel !== 'administrador' && !(await clientModel.hasProjects(clientId, user.id))) {
     throw new AppError('Acesso ao cliente proibido', 403);
   }
   return visibleClient(client, user);

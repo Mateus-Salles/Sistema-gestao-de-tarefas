@@ -70,7 +70,10 @@ describe('E2E · Projetos', () => {
       const doA = await criarProjeto({ clienteId: clienteA.id_cliente });
       await criarProjeto({ clienteId: clienteB.id_cliente });
 
-      const body = esperar(await env.api.get(`/projetos?cliente_id=${clienteA.id_cliente}`, ctx.token.admin), 200);
+      const body = esperar(
+        await env.api.get(`/projetos?cliente_id=${clienteA.id_cliente}`, ctx.token.admin),
+        200,
+      );
 
       assert.deepEqual(ids(body.dados, 'id_projeto'), [doA.id_projeto]);
     });
@@ -211,9 +214,9 @@ describe('E2E · Projetos', () => {
         await env.api.patch(
           `/projetos/${p.id_projeto}`,
           { nome: 'Nome novo', data_comeco: '2026-02-01', data_final: '2026-03-01' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editado.nome, 'Nome novo');
@@ -224,7 +227,10 @@ describe('E2E · Projetos', () => {
     it('200 · atualização parcial mantém o restante', async () => {
       const p = await criarProjeto({ nome: 'Mantém datas' });
 
-      const editado = esperar(await env.api.patch(`/projetos/${p.id_projeto}`, { nome: 'Só o nome' }, ctx.token.admin), 200);
+      const editado = esperar(
+        await env.api.patch(`/projetos/${p.id_projeto}`, { nome: 'Só o nome' }, ctx.token.admin),
+        200,
+      );
 
       assert.equal(editado.nome, 'Só o nome');
       assert.equal(editado.data_comeco, '2026-01-01');
@@ -239,9 +245,9 @@ describe('E2E · Projetos', () => {
         await env.api.patch(
           `/projetos/${p.id_projeto}`,
           { nome: 'X', cliente_id: outro.id_cliente, status: 'cancelado' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editado.cliente_id, p.cliente_id);
@@ -251,7 +257,10 @@ describe('E2E · Projetos', () => {
     it('400 · data final anterior à de começo', async () => {
       const p = await criarProjeto();
 
-      esperar(await env.api.patch(`/projetos/${p.id_projeto}`, { data_final: '2025-01-01' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(`/projetos/${p.id_projeto}`, { data_final: '2025-01-01' }, ctx.token.admin),
+        400,
+      );
     });
 
     it('403 · colaborador não pode editar projeto', async () => {
@@ -272,7 +281,10 @@ describe('E2E · Projetos', () => {
       const tarefas = await tarefasPorDivisao(p.id_projeto);
       await definirStatus(tarefas.produto.id_tarefa, 'concluido');
 
-      esperar(await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'concluido' }, ctx.token.admin), 409);
+      esperar(
+        await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'concluido' }, ctx.token.admin),
+        409,
+      );
 
       const lido = esperar(await env.api.get(`/projetos/${p.id_projeto}`, ctx.token.admin), 200);
       assert.equal(lido.status, 'andamento');
@@ -284,7 +296,7 @@ describe('E2E · Projetos', () => {
 
       const body = esperar(
         await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'concluido' }, ctx.token.admin),
-        200
+        200,
       );
 
       assert.equal(body.status, 'concluido');
@@ -296,7 +308,7 @@ describe('E2E · Projetos', () => {
 
       const body = esperar(
         await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'concluido' }, ctx.token.admin),
-        200
+        200,
       );
 
       assert.equal(body.status, 'concluido');
@@ -307,7 +319,7 @@ describe('E2E · Projetos', () => {
 
       const body = esperar(
         await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'cancelado' }, ctx.token.admin),
-        200
+        200,
       );
 
       assert.equal(body.status, 'cancelado');
@@ -316,13 +328,19 @@ describe('E2E · Projetos', () => {
     it('400 · status inválido', async () => {
       const p = await criarProjeto();
 
-      esperar(await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'arquivado' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'arquivado' }, ctx.token.admin),
+        400,
+      );
     });
 
     it('403 · colaborador não pode alterar o status do projeto', async () => {
       const p = await criarProjeto();
 
-      esperar(await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'cancelado' }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(`/projetos/${p.id_projeto}/status`, { status: 'cancelado' }, ctx.token.colabA),
+        403,
+      );
     });
 
     it('401 · sem token', async () => {

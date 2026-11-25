@@ -120,7 +120,7 @@ describe('loadDatabaseConfig', () => {
           assert.match(erro.message, /DB_NAME/);
           assert.match(erro.message, /DATABASE_URL/);
           return true;
-        }
+        },
       );
     });
 
@@ -132,15 +132,12 @@ describe('loadDatabaseConfig', () => {
           assert.doesNotMatch(erro.message, /DB_USER/);
           assert.doesNotMatch(erro.message, /DB_NAME/);
           return true;
-        }
+        },
       );
     });
 
     it('considera texto vazio como variável ausente', () => {
-      assert.throws(
-        () => loadDatabaseConfig({ ...ENV_MINIMO, DB_PASS: '' }),
-        /DB_PASS/
-      );
+      assert.throws(() => loadDatabaseConfig({ ...ENV_MINIMO, DB_PASS: '' }), /DB_PASS/);
     });
   });
 

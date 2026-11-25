@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
-import { passwordVersion } from '../utils/session.js';
 
+import { getJwtConfig } from '../configs/jwt.config.js';
 import authModel from '../models/auth.model.js';
 import userModel from '../models/user.model.js';
 import { AppError } from '../utils/AppError.js';
-import { getJwtConfig } from '../configs/jwt.config.js';
+import { passwordVersion } from '../utils/session.js';
 
 async function authenticate(req, res, next) {
   try {
@@ -22,10 +22,16 @@ async function authenticate(req, res, next) {
       throw new AppError('Token inválido ou expirado', 401);
     }
 
-    if (!payload || typeof payload !== 'object' ||
-        (typeof payload.sub !== 'string' || !/^[1-9]\d*$/.test(payload.sub)) || Number(payload.sub) > 2_147_483_647 ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.jti ?? '') ||
-        !Number.isInteger(payload.exp) || typeof payload.passwordVersion !== 'string') {
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      typeof payload.sub !== 'string' ||
+      !/^[1-9]\d*$/.test(payload.sub) ||
+      Number(payload.sub) > 2_147_483_647 ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.jti ?? '') ||
+      !Number.isInteger(payload.exp) ||
+      typeof payload.passwordVersion !== 'string'
+    ) {
       throw new AppError('Token inválido ou expirado', 401);
     }
 

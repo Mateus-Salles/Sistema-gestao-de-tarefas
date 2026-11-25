@@ -22,7 +22,7 @@ async function update(id, fields) {
 }
 
 async function remove(id) {
-  if (!await launchModel.remove(id)) throw new AppError(MODEL_NOT_FOUND, 404);
+  if (!(await launchModel.remove(id))) throw new AppError(MODEL_NOT_FOUND, 404);
 }
 
 async function listTasks(id) {
@@ -37,7 +37,7 @@ async function updateTask(id, tarefaId, fields) {
 }
 
 async function removeTask(id, tarefaId) {
-  if (!await launchModel.removeTask(id, tarefaId)) throw new AppError(TASK_NOT_FOUND, 404);
+  if (!(await launchModel.removeTask(id, tarefaId))) throw new AppError(TASK_NOT_FOUND, 404);
 }
 
 export default {

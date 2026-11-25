@@ -7,15 +7,21 @@ import { verifyPass } from '../../src/utils/Password.js';
 it('valida certificado TLS e aceita uma CA própria sem desativar a verificação', () => {
   const config = loadDatabaseConfig({
     DATABASE_URL: 'postgres://user:password@localhost/database',
-    DB_SSL: 'true', DB_SSL_CA: 'certificado PEM',
+    DB_SSL: 'true',
+    DB_SSL_CA: 'certificado PEM',
   });
   assert.deepEqual(config.ssl, { rejectUnauthorized: true, ca: 'certificado PEM' });
-  assert.throws(() => loadDatabaseConfig({
-    DATABASE_URL: 'postgres://user:password@localhost/database?sslmode=no-verify',
-  }));
-  assert.throws(() => loadDatabaseConfig({
-    DATABASE_URL: 'postgres://user:password@localhost/database?sslmode=disable', DB_SSL: 'true',
-  }));
+  assert.throws(() =>
+    loadDatabaseConfig({
+      DATABASE_URL: 'postgres://user:password@localhost/database?sslmode=no-verify',
+    }),
+  );
+  assert.throws(() =>
+    loadDatabaseConfig({
+      DATABASE_URL: 'postgres://user:password@localhost/database?sslmode=disable',
+      DB_SSL: 'true',
+    }),
+  );
 });
 
 it('rejeita chave curta para assinar tokens em produção', () => {

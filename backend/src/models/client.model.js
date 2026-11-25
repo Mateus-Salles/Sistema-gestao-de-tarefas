@@ -21,13 +21,16 @@ async function findAll({ status, limit, offset, viewerId = null }) {
       WHERE p.cliente_id = cliente.id_cliente AND (t.responsavel_id = $${params.length} OR t.criador_id = $${params.length})))`;
     where += where ? ` AND ${access}` : `WHERE ${access}`;
 
-    const countResult = await database.query(`SELECT COUNT(*) AS total FROM ${source} AS cliente ${where};`, params);
+    const countResult = await database.query(
+      `SELECT COUNT(*) AS total FROM ${source} AS cliente ${where};`,
+      params,
+    );
 
     const { rows } = await database.query(
       `SELECT ${COLUMNS} FROM ${source} AS cliente ${where}
        ORDER BY nome, id_cliente
        LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
-      [...params, limit, offset]
+      [...params, limit, offset],
     );
 
     return { rows, total: Number(countResult.rows[0].total) };
@@ -40,7 +43,9 @@ async function findAll({ status, limit, offset, viewerId = null }) {
 
 async function findById(clientId) {
   try {
-    const { rows } = await database.query(`SELECT ${COLUMNS} FROM cliente WHERE id_cliente = $1;`, [clientId]);
+    const { rows } = await database.query(`SELECT ${COLUMNS} FROM cliente WHERE id_cliente = $1;`, [
+      clientId,
+    ]);
 
     return rows[0] || null;
   } catch (err) {
@@ -56,7 +61,7 @@ async function create(userId, { nome, contato }) {
     return await database.transactionAsUser(userId, async (client) => {
       const { rows } = await client.query(
         `INSERT INTO cliente (nome, contato) VALUES ($1, $2) RETURNING ${COLUMNS};`,
-        [nome, contato]
+        [nome, contato],
       );
 
       return rows[0];
@@ -79,7 +84,7 @@ async function update(clientId, data) {
 
     const { rows } = await database.query(
       `UPDATE cliente SET ${setClause} WHERE id_cliente = $${fields.length + 1} RETURNING ${COLUMNS};`,
-      [...values, clientId]
+      [...values, clientId],
     );
 
     return rows[0] || null;
@@ -94,7 +99,7 @@ async function updateStatus(clientId, status) {
   try {
     const { rows } = await database.query(
       `UPDATE cliente SET status = $1 WHERE id_cliente = $2 RETURNING ${COLUMNS};`,
-      [status, clientId]
+      [status, clientId],
     );
 
     return rows[0] || null;
@@ -106,7 +111,9 @@ async function updateStatus(clientId, status) {
 }
 
 async function hasProjects(clientId, userId) {
-  const { rows: [result] } = await database.query(
+  const {
+    rows: [result],
+  } = await database.query(
     `SELECT EXISTS (SELECT 1 FROM projeto p JOIN tarefa t ON t.projeto_id = p.id_projeto
      WHERE p.cliente_id = $1 AND (t.responsavel_id = $2 OR t.criador_id = $2)) AS allowed`,
     [clientId, userId],

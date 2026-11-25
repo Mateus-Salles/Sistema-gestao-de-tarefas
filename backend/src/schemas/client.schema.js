@@ -7,8 +7,16 @@ const CONTACT_MAX = 150;
 
 const clientStatusSchema = z.enum(['ativa', 'inativa'], { error: 'status deve ser "ativa" ou "inativa"' });
 
-const nameField = z.string().trim().min(1, 'Nome é obrigatório').max(NAME_MAX, `Nome deve ter no máximo ${NAME_MAX} caracteres`);
-const contactField = z.string().trim().min(1, 'Contato é obrigatório').max(CONTACT_MAX, `Contato deve ter no máximo ${CONTACT_MAX} caracteres`);
+const nameField = z
+  .string()
+  .trim()
+  .min(1, 'Nome é obrigatório')
+  .max(NAME_MAX, `Nome deve ter no máximo ${NAME_MAX} caracteres`);
+const contactField = z
+  .string()
+  .trim()
+  .min(1, 'Contato é obrigatório')
+  .max(CONTACT_MAX, `Contato deve ter no máximo ${CONTACT_MAX} caracteres`);
 
 const listClientsQuerySchema = paginationQuerySchema.extend({
   status: clientStatusSchema.optional(),

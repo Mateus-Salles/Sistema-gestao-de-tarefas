@@ -1,4 +1,4 @@
-import { Pool, types } from "pg";
+import { Pool, types } from 'pg';
 
 const OID_BIGINT = 20;
 const OID_DATE = 1082;
@@ -32,11 +32,11 @@ export class Database {
       await this.pool.query('SELECT 1');
 
       console.log('[Database] Conectado ao PostgreSQL com sucesso.');
-    } catch(err) {
+    } catch (err) {
       await this.pool.end().catch(() => {});
 
       this.pool = null;
-      throw new Error(`[Database] Falha ao conectar ao PostgreSQL: ${err.message}`);
+      throw new Error(`[Database] Falha ao conectar ao PostgreSQL: ${err.message}`, { cause: err });
     }
 
     return this.pool;
@@ -94,7 +94,7 @@ export class Database {
       await client.query('BEGIN');
 
       if (userId !== null) {
-        await client.query('SELECT set_config(\'app.current_user_id\', $1, true)', [String(userId),]);
+        await client.query("SELECT set_config('app.current_user_id', $1, true)", [String(userId)]);
       }
 
       const result = await callback(client);
@@ -102,7 +102,7 @@ export class Database {
       await client.query('COMMIT');
 
       return result;
-    } catch(err) {
+    } catch (err) {
       await client.query('ROLLBACK');
 
       throw err;

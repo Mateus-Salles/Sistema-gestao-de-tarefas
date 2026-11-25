@@ -24,22 +24,10 @@ psql -v ON_ERROR_STOP=1 -h localhost -U seu_usuario -d seu_banco -f src/database
 
 ## Primeiro administrador
 
-Depois de criar as tabelas, gere o hash da senha no diretório `backend` usando Bash. Informe uma senha nova de 8 a 128 caracteres.
+Aplique o esquema do banco antes de iniciar a API. Em um banco já instalado, confira se a tabela `usuario_perfil_inicial` existe e, se faltar, execute o `CREATE TABLE usuario_perfil_inicial` de `src/database/01_tabelas_indices.sql`.
 
-```bash
-read -rs -p 'Senha do administrador: ' senha_admin
-printf '\n'
-printf '%s' "$senha_admin" | node --input-type=module -e '
-import { hashPass } from "./src/utils/Password.js";
-process.stdin.setEncoding("utf8");
-let senha = "";
-for await (const trecho of process.stdin) senha += trecho;
-console.log(await hashPass(senha));'
-unset senha_admin
-```
+Defina `ADMIN_INICIAL_SENHA` com uma senha provisória de 8 a 128 caracteres no `.env` da raiz do repositório ou, no Render, em **Environment**. Inicie a API normalmente com `npm start` no diretório `backend` ou com Docker Compose. A API gera o hash scrypt ao iniciar e envia apenas o hash ao banco.
 
-Ainda em `backend`, substitua `seu_usuario` e `seu_banco` pelos dados da conexão. Execute o seed com o `psql` e informe o nome, o e-mail e o hash gerado. O script insere a conta ativa somente se ainda não houver um administrador.
+Se ainda não houver um administrador, a API cria a conta `admin@email.com` com o nome `admin` e registra a pendência de primeiro acesso na mesma transação. Entre com a senha provisória original. O primeiro acesso exige a troca de nome, e-mail e senha.
 
-```bash
-psql -h localhost -U seu_usuario -d seu_banco -f src/database/seeds/primeiro_administrador.sql
-```
+Depois de confirmar a criação da conta, você pode remover `ADMIN_INICIAL_SENHA` da configuração. Reiniciar com a variável preenchida preserva o administrador existente.

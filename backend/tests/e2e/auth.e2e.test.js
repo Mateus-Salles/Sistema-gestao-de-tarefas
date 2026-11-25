@@ -35,7 +35,7 @@ describe('E2E · Autenticação', () => {
     it('200 · devolve token JWT e os dados do usuário, sem expor senha/hash', async () => {
       const body = esperar(
         await env.api.post('/auth/login', { email: 'admin@forge.test', senha: SENHA_PADRAO }),
-        200
+        200,
       );
 
       assert.equal(typeof body.token, 'string');
@@ -65,7 +65,7 @@ describe('E2E · Autenticação', () => {
     it('200 · o token devolvido autentica as demais rotas', async () => {
       const { token } = esperar(
         await env.api.post('/auth/login', { email: 'caio@forge.test', senha: SENHA_PADRAO }),
-        200
+        200,
       );
 
       const me = esperar(await env.api.get('/usuarios/me', token), 200);
@@ -120,7 +120,10 @@ describe('E2E · Autenticação', () => {
       assert.equal(res.texto, '');
 
       const revogados = await consultar('SELECT jti FROM token_revogado');
-      assert.deepEqual(revogados.map((r) => r.jti), [jti]);
+      assert.deepEqual(
+        revogados.map((r) => r.jti),
+        [jti],
+      );
 
       const depois = await env.api.get('/usuarios/me', token);
       assert.equal(esperar(depois, 401).erro, 'Token revogado');
@@ -159,7 +162,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: NOVA },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
       assert.equal(res.status, 204);
 
@@ -185,7 +188,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: 'nao-e-essa-aqui', senha_nova: NOVA },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       assert.equal(esperar(res, 401).erro, 'Senha atual incorreta');
@@ -196,7 +199,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: SENHA_PADRAO },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       esperar(res, 400);
@@ -206,7 +209,7 @@ describe('E2E · Autenticação', () => {
       const res = await env.api.patch(
         '/auth/senha',
         { senha_atual: SENHA_PADRAO, senha_nova: 'curta' },
-        ctx.token.colabA
+        ctx.token.colabA,
       );
 
       esperar(res, 400);
@@ -269,7 +272,11 @@ describe('E2E · Autenticação', () => {
     });
 
     it('401 · token de usuário que não existe mais', async () => {
-      const fantasma = gerarToken({ id_usuario: 999999, nivel_acesso: 'administrador', senha_hash: 'hash-do-usuario-inexistente' });
+      const fantasma = gerarToken({
+        id_usuario: 999999,
+        nivel_acesso: 'administrador',
+        senha_hash: 'hash-do-usuario-inexistente',
+      });
 
       esperar(await env.api.get(rota, fantasma), 401);
     });

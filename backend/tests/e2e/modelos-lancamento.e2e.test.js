@@ -58,7 +58,7 @@ describe('E2E · Modelos de Lançamento', () => {
     it('201 · administrador cadastra modelo ativo', async () => {
       const criado = esperar(
         await env.api.post('/modelos-lancamento', { nome: 'Lançamento Meteórico' }, ctx.token.admin),
-        201
+        201,
       );
 
       assert.ok(Number.isInteger(criado.id_modelo_lancamento));
@@ -84,7 +84,10 @@ describe('E2E · Modelos de Lançamento', () => {
     it('200 · devolve o modelo com suas tarefas padrão', async () => {
       const modelo = await criarModelo({ nome: 'Completo', tarefas: TAREFAS_DO_MODELO_PADRAO });
 
-      const body = esperar(await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 200);
+      const body = esperar(
+        await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin),
+        200,
+      );
 
       assert.equal(body.id_modelo_lancamento, modelo.id_modelo_lancamento);
       assert.equal(body.nome, 'Completo');
@@ -103,7 +106,10 @@ describe('E2E · Modelos de Lançamento', () => {
     it('200 · modelo sem tarefas padrão devolve lista vazia', async () => {
       const modelo = await criarModelo();
 
-      const body = esperar(await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 200);
+      const body = esperar(
+        await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin),
+        200,
+      );
 
       assert.deepEqual(body.tarefas_padrao, []);
     });
@@ -123,8 +129,12 @@ describe('E2E · Modelos de Lançamento', () => {
       const modelo = await criarModelo({ nome: 'Antigo' });
 
       const editado = esperar(
-        await env.api.patch(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, { nome: 'Novo nome' }, ctx.token.admin),
-        200
+        await env.api.patch(
+          `/modelos-lancamento/${modelo.id_modelo_lancamento}`,
+          { nome: 'Novo nome' },
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(editado.nome, 'Novo nome');
@@ -134,14 +144,18 @@ describe('E2E · Modelos de Lançamento', () => {
       const modelo = await criarModelo({ nome: 'Base', tarefas: TAREFAS_DO_MODELO_PADRAO });
       const projeto = await criarProjeto({ modeloId: modelo.id_modelo_lancamento });
 
-      await env.api.patch(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, { nome: 'Base v2' }, ctx.token.admin);
+      await env.api.patch(
+        `/modelos-lancamento/${modelo.id_modelo_lancamento}`,
+        { nome: 'Base v2' },
+        ctx.token.admin,
+      );
       esperar(
         await env.api.post(
           `/modelos-lancamento/${modelo.id_modelo_lancamento}/tarefas-padrao`,
           { titulo: 'Tarefa nova só no modelo', divisao: 'produto' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        201
+        201,
       );
 
       const [{ total }] = await consultar('SELECT COUNT(*) AS total FROM tarefa WHERE projeto_id = $1', [
@@ -153,13 +167,27 @@ describe('E2E · Modelos de Lançamento', () => {
     it('400 · nome vazio', async () => {
       const modelo = await criarModelo();
 
-      esperar(await env.api.patch(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, { nome: '' }, ctx.token.admin), 400);
+      esperar(
+        await env.api.patch(
+          `/modelos-lancamento/${modelo.id_modelo_lancamento}`,
+          { nome: '' },
+          ctx.token.admin,
+        ),
+        400,
+      );
     });
 
     it('403 · colaborador não pode editar modelo', async () => {
       const modelo = await criarModelo();
 
-      esperar(await env.api.patch(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, { nome: 'X' }, ctx.token.colabA), 403);
+      esperar(
+        await env.api.patch(
+          `/modelos-lancamento/${modelo.id_modelo_lancamento}`,
+          { nome: 'X' },
+          ctx.token.colabA,
+        ),
+        403,
+      );
     });
 
     it('401 · sem token', async () => {
@@ -172,9 +200,15 @@ describe('E2E · Modelos de Lançamento', () => {
     it('204 · retira modelo do catálogo e preserva tarefas padrão e projetos históricos', async () => {
       const modelo = await criarModelo({ tarefas: TAREFAS_DO_MODELO_PADRAO });
       const projeto = await criarProjeto({ modeloId: modelo.id_modelo_lancamento });
-      assert.equal((await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin)).status, 204);
+      assert.equal(
+        (await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin)).status,
+        204,
+      );
 
-      const detalhe = esperar(await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin), 200);
+      const detalhe = esperar(
+        await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.admin),
+        200,
+      );
       assert.equal(detalhe.status, 'inativo');
       assert.equal(detalhe.tarefas_padrao.length, 4);
       assert.deepEqual(esperar(await env.api.get('/modelos-lancamento', ctx.token.admin), 200), []);
@@ -185,7 +219,10 @@ describe('E2E · Modelos de Lançamento', () => {
     it('403 · colaborador não pode excluir modelo', async () => {
       const modelo = await criarModelo();
 
-      esperar(await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.colabA), 403);
+      esperar(
+        await env.api.delete(`/modelos-lancamento/${modelo.id_modelo_lancamento}`, ctx.token.colabA),
+        403,
+      );
     });
 
     it('401 · sem token', async () => {
@@ -200,8 +237,11 @@ describe('E2E · Modelos de Lançamento', () => {
       await criarModelo({ tarefas: [{ titulo: 'De outro modelo', divisao: 'produto' }] });
 
       const lista = esperar(
-        await env.api.get(`/modelos-lancamento/${modelo.id_modelo_lancamento}/tarefas-padrao`, ctx.token.admin),
-        200
+        await env.api.get(
+          `/modelos-lancamento/${modelo.id_modelo_lancamento}/tarefas-padrao`,
+          ctx.token.admin,
+        ),
+        200,
       );
 
       assert.equal(lista.length, 4);
@@ -221,8 +261,12 @@ describe('E2E · Modelos de Lançamento', () => {
       const id = modelo.id_modelo_lancamento;
 
       const criada = esperar(
-        await env.api.post(`/modelos-lancamento/${id}/tarefas-padrao`, { titulo: 'Gravar VSL', divisao: 'conteudo' }, ctx.token.admin),
-        201
+        await env.api.post(
+          `/modelos-lancamento/${id}/tarefas-padrao`,
+          { titulo: 'Gravar VSL', divisao: 'conteudo' },
+          ctx.token.admin,
+        ),
+        201,
       );
 
       assert.ok(Number.isInteger(criada.id_tarefa_padrao));
@@ -250,14 +294,17 @@ describe('E2E · Modelos de Lançamento', () => {
         await env.api.post(
           `/modelos-lancamento/${modelo.id_modelo_lancamento}/tarefas-padrao`,
           { titulo: 'X', divisao: 'produto' },
-          ctx.token.colabA
+          ctx.token.colabA,
         ),
-        403
+        403,
       );
     });
 
     it('401 · sem token', async () => {
-      esperar(await env.api.post('/modelos-lancamento/1/tarefas-padrao', { titulo: 'X', divisao: 'produto' }), 401);
+      esperar(
+        await env.api.post('/modelos-lancamento/1/tarefas-padrao', { titulo: 'X', divisao: 'produto' }),
+        401,
+      );
     });
   });
 
@@ -265,9 +312,10 @@ describe('E2E · Modelos de Lançamento', () => {
   describe('PATCH /modelos-lancamento/{id}/tarefas-padrao/{tarefaId} (RF12)', () => {
     async function modeloComUmaTarefa() {
       const modelo = await criarModelo({ tarefas: [{ titulo: 'Original', divisao: 'produto' }] });
-      const [tp] = await consultar('SELECT id_tarefa_padrao FROM tarefa_padrao WHERE modelo_lancamento_id = $1', [
-        modelo.id_modelo_lancamento,
-      ]);
+      const [tp] = await consultar(
+        'SELECT id_tarefa_padrao FROM tarefa_padrao WHERE modelo_lancamento_id = $1',
+        [modelo.id_modelo_lancamento],
+      );
       return { modeloId: modelo.id_modelo_lancamento, tarefaId: tp.id_tarefa_padrao };
     }
 
@@ -278,9 +326,9 @@ describe('E2E · Modelos de Lançamento', () => {
         await env.api.patch(
           `/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`,
           { titulo: 'Reescrita', divisao: 'trafego' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        200
+        200,
       );
 
       assert.equal(editada.id_tarefa_padrao, tarefaId);
@@ -295,9 +343,9 @@ describe('E2E · Modelos de Lançamento', () => {
         await env.api.patch(
           `/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`,
           { titulo: 'X', divisao: 'inexistente' },
-          ctx.token.admin
+          ctx.token.admin,
         ),
-        400
+        400,
       );
     });
 
@@ -308,14 +356,17 @@ describe('E2E · Modelos de Lançamento', () => {
         await env.api.patch(
           `/modelos-lancamento/${modeloId}/tarefas-padrao/${tarefaId}`,
           { titulo: 'X', divisao: 'produto' },
-          ctx.token.colabA
+          ctx.token.colabA,
         ),
-        403
+        403,
       );
     });
 
     it('401 · sem token', async () => {
-      esperar(await env.api.patch('/modelos-lancamento/1/tarefas-padrao/1', { titulo: 'X', divisao: 'produto' }), 401);
+      esperar(
+        await env.api.patch('/modelos-lancamento/1/tarefas-padrao/1', { titulo: 'X', divisao: 'produto' }),
+        401,
+      );
     });
   });
 
@@ -324,31 +375,38 @@ describe('E2E · Modelos de Lançamento', () => {
     it('204 · remove a tarefa padrão do modelo', async () => {
       const modelo = await criarModelo({ tarefas: TAREFAS_DO_MODELO_PADRAO });
       const id = modelo.id_modelo_lancamento;
-      const antes = esperar(await env.api.get(`/modelos-lancamento/${id}/tarefas-padrao`, ctx.token.admin), 200);
+      const antes = esperar(
+        await env.api.get(`/modelos-lancamento/${id}/tarefas-padrao`, ctx.token.admin),
+        200,
+      );
 
       const res = await env.api.delete(
         `/modelos-lancamento/${id}/tarefas-padrao/${antes[0].id_tarefa_padrao}`,
-        ctx.token.admin
+        ctx.token.admin,
       );
       assert.equal(res.status, 204);
 
-      const depois = esperar(await env.api.get(`/modelos-lancamento/${id}/tarefas-padrao`, ctx.token.admin), 200);
+      const depois = esperar(
+        await env.api.get(`/modelos-lancamento/${id}/tarefas-padrao`, ctx.token.admin),
+        200,
+      );
       assert.equal(depois.length, 3);
       assert.ok(!ids(depois, 'id_tarefa_padrao').includes(antes[0].id_tarefa_padrao));
     });
 
     it('403 · colaborador não pode remover tarefa padrão', async () => {
       const modelo = await criarModelo({ tarefas: [{ titulo: 'X', divisao: 'produto' }] });
-      const [tp] = await consultar('SELECT id_tarefa_padrao FROM tarefa_padrao WHERE modelo_lancamento_id = $1', [
-        modelo.id_modelo_lancamento,
-      ]);
+      const [tp] = await consultar(
+        'SELECT id_tarefa_padrao FROM tarefa_padrao WHERE modelo_lancamento_id = $1',
+        [modelo.id_modelo_lancamento],
+      );
 
       esperar(
         await env.api.delete(
           `/modelos-lancamento/${modelo.id_modelo_lancamento}/tarefas-padrao/${tp.id_tarefa_padrao}`,
-          ctx.token.colabA
+          ctx.token.colabA,
         ),
-        403
+        403,
       );
     });
 

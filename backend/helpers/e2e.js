@@ -43,13 +43,15 @@ function garantirBancoDeTeste() {
   if (!/test/i.test(nomeDoBanco())) {
     throw new Error(
       `[e2e] Recusando rodar no banco "${nomeDoBanco()}": os testes E2E apagam todos os dados. ` +
-        'Use um banco cujo nome contenha "test" (ex.: forge_test).'
+        'Use um banco cujo nome contenha "test" (ex.: forge_test).',
     );
   }
 }
 
 async function garantirSchema() {
-  const { rows: [schema] } = await database.query(`
+  const {
+    rows: [schema],
+  } = await database.query(`
     SELECT to_regclass('public.cliente') AS tabela,
            to_regprocedure('public.fn_impede_promocao_com_tarefas()') AS integridade,
            EXISTS (
@@ -76,7 +78,7 @@ export function esperar(res, status) {
   assert.equal(
     res.status,
     status,
-    `esperado HTTP ${status}, recebido ${res.status}: ${JSON.stringify(res.body)}`
+    `esperado HTTP ${status}, recebido ${res.status}: ${JSON.stringify(res.body)}`,
   );
   return res.body;
 }
@@ -103,12 +105,16 @@ export async function dataRelativa(dias) {
 
 export function gerarToken(
   usuario,
-  { expiresIn = '1h', secret = process.env.JWT_SECRET, jti = randomUUID() } = {}
+  { expiresIn = '1h', secret = process.env.JWT_SECRET, jti = randomUUID() } = {},
 ) {
   return jwt.sign(
-    { sub: String(usuario.id_usuario), accessLevel: usuario.nivel_acesso, passwordVersion: passwordVersion(usuario.senha_hash) },
+    {
+      sub: String(usuario.id_usuario),
+      accessLevel: usuario.nivel_acesso,
+      passwordVersion: passwordVersion(usuario.senha_hash),
+    },
     secret,
-    { algorithm: 'HS256', expiresIn, jwtid: jti }
+    { algorithm: 'HS256', expiresIn, jwtid: jti },
   );
 }
 
@@ -124,7 +130,7 @@ const hashDaSenhaPadrao = () => (hashPadrao ??= hashPass(SENHA_PADRAO));
 
 async function idAdmin() {
   const [admin] = await consultar(
-    `SELECT id_usuario FROM usuario WHERE nivel_acesso = 'administrador' AND status = 'ativo' ORDER BY id_usuario LIMIT 1`
+    `SELECT id_usuario FROM usuario WHERE nivel_acesso = 'administrador' AND status = 'ativo' ORDER BY id_usuario LIMIT 1`,
   );
   assert.ok(admin, '[e2e] seed precisa de um administrador ativo — chame env.preparar() antes');
   return admin.id_usuario;
@@ -138,7 +144,7 @@ export async function criarUsuario({ nome, email, nivel = 'colaborador', status 
     `INSERT INTO usuario (nome, email, senha_hash, nivel_acesso, status)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id_usuario, nome, email, nivel_acesso, status, senha_hash`,
-    [nome ?? `Usuário ${n}`, email ?? `${n}@forge.test`, hash, nivel, status]
+    [nome ?? `Usuário ${n}`, email ?? `${n}@forge.test`, hash, nivel, status],
   );
 
   return usuario;
@@ -151,7 +157,7 @@ export async function criarCliente({ nome, contato, status = 'ativa' } = {}) {
   return database.transactionAsUser(adminId, async (client) => {
     const { rows } = await client.query(
       `INSERT INTO cliente (nome, contato, status) VALUES ($1, $2, $3) RETURNING *`,
-      [nome ?? `Cliente ${n}`, contato ?? `${n}@cliente.test`, status]
+      [nome ?? `Cliente ${n}`, contato ?? `${n}@cliente.test`, status],
     );
     return rows[0];
   });
@@ -160,14 +166,15 @@ export async function criarCliente({ nome, contato, status = 'ativa' } = {}) {
 export async function criarModelo({ nome, status = 'ativo', tarefas = [] } = {}) {
   const [modelo] = await consultar(
     `INSERT INTO modelo_lancamento (nome, status) VALUES ($1, $2) RETURNING *`,
-    [nome ?? `Modelo ${unico('modelo')}`, status]
+    [nome ?? `Modelo ${unico('modelo')}`, status],
   );
 
   for (const tarefa of tarefas) {
-    await consultar(
-      `INSERT INTO tarefa_padrao (modelo_lancamento_id, titulo, divisao) VALUES ($1, $2, $3)`,
-      [modelo.id_modelo_lancamento, tarefa.titulo, tarefa.divisao]
-    );
+    await consultar(`INSERT INTO tarefa_padrao (modelo_lancamento_id, titulo, divisao) VALUES ($1, $2, $3)`, [
+      modelo.id_modelo_lancamento,
+      tarefa.titulo,
+      tarefa.divisao,
+    ]);
   }
 
   return modelo;
@@ -190,13 +197,13 @@ export async function criarProjeto({
     const { rows } = await client.query(
       `INSERT INTO projeto (cliente_id, modelo_lancamento_id, nome, data_comeco, data_final)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [cliente, modelo, nome ?? `Projeto ${unico('projeto')}`, dataComeco, dataFinal]
+      [cliente, modelo, nome ?? `Projeto ${unico('projeto')}`, dataComeco, dataFinal],
     );
 
     if (status !== 'andamento') {
       const { rows: atualizado } = await client.query(
         `UPDATE projeto SET status = $1 WHERE id_projeto = $2 RETURNING *`,
-        [status, rows[0].id_projeto]
+        [status, rows[0].id_projeto],
       );
       return atualizado[0];
     }
@@ -220,7 +227,16 @@ export async function criarTarefa({
   const [tarefa] = await consultar(
     `INSERT INTO tarefa (projeto_id, responsavel_id, criador_id, titulo, descricao, divisao, kanban_status, vencimento)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [projetoId, responsavelId, criador, titulo ?? `Tarefa ${unico('tarefa')}`, descricao, divisao, status, vencimento]
+    [
+      projetoId,
+      responsavelId,
+      criador,
+      titulo ?? `Tarefa ${unico('tarefa')}`,
+      descricao,
+      divisao,
+      status,
+      vencimento,
+    ],
   );
 
   return tarefa;
@@ -228,7 +244,9 @@ export async function criarTarefa({
 
 /** Tarefas geradas para o projeto, indexadas por divisão (produto, conteudo, trafego, disparos). */
 export async function tarefasPorDivisao(projetoId) {
-  const linhas = await consultar(`SELECT * FROM tarefa WHERE projeto_id = $1 ORDER BY id_tarefa`, [projetoId]);
+  const linhas = await consultar(`SELECT * FROM tarefa WHERE projeto_id = $1 ORDER BY id_tarefa`, [
+    projetoId,
+  ]);
   return Object.fromEntries(linhas.map((t) => [t.divisao, t]));
 }
 
@@ -242,13 +260,17 @@ export async function definirStatus(tarefaIds, status) {
   const adminId = await idAdmin();
 
   await database.transactionAsUser(adminId, (client) =>
-    client.query(`UPDATE tarefa SET kanban_status = $1 WHERE id_tarefa = ANY($2::int[])`, [status, lista])
+    client.query(`UPDATE tarefa SET kanban_status = $1 WHERE id_tarefa = ANY($2::int[])`, [status, lista]),
   );
 }
 
 export async function concluirTodasAsTarefas(projetoId) {
   const linhas = await consultar(`SELECT id_tarefa FROM tarefa WHERE projeto_id = $1`, [projetoId]);
-  if (linhas.length) await definirStatus(linhas.map((l) => l.id_tarefa), 'concluido');
+  if (linhas.length)
+    await definirStatus(
+      linhas.map((l) => l.id_tarefa),
+      'concluido',
+    );
 }
 
 /* ------------------------------------------------------------------ */
@@ -286,7 +308,7 @@ export async function iniciarAmbiente() {
     });
 
     const texto = await res.text();
-    let json = null;
+    let json;
     try {
       json = texto ? JSON.parse(texto) : null;
     } catch {
@@ -306,10 +328,14 @@ export async function iniciarAmbiente() {
   /** Zera o banco e cria 1 administrador + 2 colaboradores (com tokens prontos). */
   async function preparar() {
     await consultar(
-      `TRUNCATE token_revogado, tarefa, projeto, tarefa_padrao, modelo_lancamento, cliente, usuario RESTART IDENTITY CASCADE`
+      `TRUNCATE token_revogado, tarefa, projeto, tarefa_padrao, modelo_lancamento, cliente, usuario RESTART IDENTITY CASCADE`,
     );
 
-    const admin = await criarUsuario({ nome: 'Ana Admin', email: 'admin@forge.test', nivel: 'administrador' });
+    const admin = await criarUsuario({
+      nome: 'Ana Admin',
+      email: 'admin@forge.test',
+      nivel: 'administrador',
+    });
     const colabA = await criarUsuario({ nome: 'Caio Colaborador', email: 'caio@forge.test' });
     const colabB = await criarUsuario({ nome: 'Bia Colaboradora', email: 'bia@forge.test' });
 

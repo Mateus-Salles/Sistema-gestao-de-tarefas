@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import database from '../database/index.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -14,7 +15,7 @@ async function findById(userId) {
     const { rows } = await client.query(`SELECT ${COLUMNS} FROM usuario WHERE id_usuario = $1;`, [userId]);
 
     return rows[0] || null;
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] findById: ', err);
 
     throw new AppError('Erro ao tentar ler o usuário', 500);
@@ -29,10 +30,13 @@ async function findByEmailWithPassword(email) {
   try {
     client = await database.getClient();
 
-    const { rows } = await client.query(`SELECT ${COLUMNS}, senha_hash FROM usuario WHERE LOWER(email) = LOWER($1);`, [email]);
+    const { rows } = await client.query(
+      `SELECT ${COLUMNS}, senha_hash, EXISTS (SELECT 1 FROM usuario_perfil_inicial AS perfil WHERE perfil.usuario_id = usuario.id_usuario) AS perfil_pendente FROM usuario WHERE LOWER(email) = LOWER($1)`,
+      [email],
+    );
 
     return rows[0] || null;
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] findByEmailWithPassword: ', err);
 
     throw new AppError('Erro ao tentar ler o usuário pelo email', 500);
@@ -47,10 +51,12 @@ async function findByIdWithPassword(userId) {
   try {
     client = await database.getClient();
 
-    const { rows } = await client.query(`SELECT ${COLUMNS}, senha_hash FROM usuario WHERE id_usuario = $1;`, [userId]);
+    const { rows } = await client.query(`SELECT ${COLUMNS}, senha_hash FROM usuario WHERE id_usuario = $1;`, [
+      userId,
+    ]);
 
     return rows[0] || null;
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] findByIdWithPassword: ', err);
 
     throw new AppError('Erro ao tentar ler o usuário pelo ID', 500);
@@ -80,11 +86,11 @@ async function findAll({ status, limit, offset }) {
 
     const { rows } = await client.query(
       `SELECT ${COLUMNS} FROM ${source} ${where} ORDER BY nome, id_usuario LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
-      [...params, limit, offset]
+      [...params, limit, offset],
     );
 
     return { rows, total: Number(countResult.rows[0].total) };
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] findAll: ', err);
 
     throw new AppError('Erro ao tentar listar os usuários', 500);
@@ -101,11 +107,11 @@ async function create({ name, email, passwordHash, accessLevel }) {
 
     const { rows } = await client.query(
       `INSERT INTO usuario (nome, email, senha_hash, nivel_acesso) VALUES ($1, $2, $3, $4) RETURNING ${COLUMNS};`,
-      [name, email, passwordHash, accessLevel]
+      [name, email, passwordHash, accessLevel],
     );
 
     return rows[0];
-  } catch(err) {
+  } catch (err) {
     if (err.code === PG_UNIQUE_VIOLATION) throw new AppError('E-mail já cadastrado', 409);
 
     console.error('[user.model] create: ', err);
@@ -132,11 +138,11 @@ async function update(userId, fields) {
 
     const { rows } = await client.query(
       `UPDATE usuario SET ${setClause} WHERE id_usuario = $${values.length + 1} RETURNING ${COLUMNS};`,
-      [...values, userId]
+      [...values, userId],
     );
 
     return rows[0] || null;
-  } catch(err) {
+  } catch (err) {
     if (err.code === PG_UNIQUE_VIOLATION) throw new AppError('E-mail já cadastrado', 409);
 
     if (err.code === '23514' && err.constraint === 'chk_responsavel_colaborador') {
@@ -158,12 +164,55 @@ async function updateHashPassword(userId, hashPassword) {
     client = await database.getClient();
 
     await client.query(`UPDATE usuario SET senha_hash = $1 WHERE id_usuario = $2;`, [hashPassword, userId]);
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] updateHashPassword: ', err);
 
     throw new AppError('Erro ao tentar atualizar a senha', 500);
   } finally {
     client?.release();
+  }
+}
+
+async function seedInitialAdmin(passwordHash) {
+  const sql = await readFile(
+    new URL('../database/seeds/primeiro_administrador.sql', import.meta.url),
+    'utf8',
+  );
+
+  return database.transaction(async (client) => {
+    await client.query('LOCK TABLE usuario IN SHARE ROW EXCLUSIVE MODE');
+    const { rowCount } = await client.query(sql, [passwordHash]);
+    return rowCount > 0;
+  });
+}
+
+async function completeInitialProfile({ email, nome, novo_email }, validateAndHashPassword) {
+  try {
+    await database.transaction(async (client) => {
+      const {
+        rows: [user],
+      } = await client.query(
+        `SELECT u.id_usuario, u.nome, u.email, u.senha_hash
+         FROM usuario AS u
+         JOIN usuario_perfil_inicial AS p ON p.usuario_id = u.id_usuario
+         WHERE LOWER(u.email) = LOWER($1) AND u.status = 'ativo'
+         FOR UPDATE OF u, p`,
+        [email],
+      );
+
+      const senhaHash = await validateAndHashPassword(user);
+
+      await client.query(
+        `UPDATE usuario SET nome = $1, email = $2, senha_hash = $3
+         WHERE id_usuario = $4`,
+        [nome, novo_email, senhaHash, user.id_usuario],
+      );
+
+      await client.query('DELETE FROM usuario_perfil_inicial WHERE usuario_id = $1', [user.id_usuario]);
+    });
+  } catch (err) {
+    if (err.code === PG_UNIQUE_VIOLATION) throw new AppError('E-mail já cadastrado', 409);
+    throw err;
   }
 }
 
@@ -175,11 +224,11 @@ async function updateStatus(userId, status) {
 
     const { rows } = await client.query(
       `UPDATE usuario SET status = $1 WHERE id_usuario = $2 RETURNING ${COLUMNS};`,
-      [status, userId]
+      [status, userId],
     );
 
     return rows[0] || null;
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] updateStatus: ', err);
 
     throw new AppError('Erro ao tentar atualizar o status do usuário', 500);
@@ -216,11 +265,11 @@ async function findKanban(userId, { division, kanbanStatus }) {
           AND ($2::varchar IS NULL OR t.divisao = $2)
           AND ($3::varchar IS NULL OR t.kanban_status = $3)
         ORDER BY t.vencimento NULLS LAST, t.criado_em;`,
-      [userId, division ?? null, kanbanStatus ?? null]
+      [userId, division ?? null, kanbanStatus ?? null],
     );
 
     return rows;
-  } catch(err) {
+  } catch (err) {
     console.error('[user.model] findKanban: ', err);
 
     throw new AppError('Erro ao tentar ler o Kanban do usuário', 500);
@@ -234,9 +283,11 @@ export default {
   findByEmailWithPassword,
   findByIdWithPassword,
   updateHashPassword,
+  seedInitialAdmin,
+  completeInitialProfile,
   findAll,
   create,
   update,
   updateStatus,
-  findKanban
+  findKanban,
 };
