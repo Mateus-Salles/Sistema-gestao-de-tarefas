@@ -53,12 +53,22 @@ async function garantirSchema() {
     rows: [schema],
   } = await database.query(`
     SELECT to_regclass('public.cliente') AS tabela,
+           to_regclass('public.usuario_perfil_inicial') AS perfil_inicial,
            to_regprocedure('public.fn_impede_promocao_com_tarefas()') AS integridade,
            EXISTS (
              SELECT 1 FROM information_schema.columns
              WHERE table_schema = 'public' AND table_name = 'vw_tarefas_atrasadas' AND column_name = 'criador_id'
            ) AS views_atualizadas
   `);
+
+  if (schema.tabela && !schema.perfil_inicial) {
+    await database.query(`
+      CREATE TABLE IF NOT EXISTS usuario_perfil_inicial (
+        usuario_id INT PRIMARY KEY REFERENCES usuario(id_usuario) ON DELETE CASCADE
+      )
+    `);
+  }
+
   if (schema.tabela && schema.integridade && schema.views_atualizadas) return;
 
   const arquivos = schema.tabela ? [] : ['01_tabelas_indices.sql'];

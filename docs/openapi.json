@@ -96,10 +96,111 @@
      "401": {
       "$ref": "#/components/responses/NaoAutorizado"
      },
+     "403": {
+      "description": "O administrador precisa concluir o perfil inicial antes de receber um token",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "codigo",
+          "erro"
+         ],
+         "properties": {
+          "codigo": {
+           "type": "string",
+           "enum": [
+            "PERFIL_PENDENTE"
+           ]
+          },
+          "erro": {
+           "type": "string",
+           "example": "Altere seu nome, e-mail e senha para continuar."
+          }
+         }
+        }
+       }
+      }
+     },
      "429": {
       "description": "Limite de 30 tentativas de login por IP em 15 minutos. Sucessos não consomem o limite."
      }
     }
+   }
+  },
+  "/auth/perfil-inicial": {
+   "post": {
+    "tags": [
+     "Autenticação"
+    ],
+    "summary": "Conclui o perfil do primeiro administrador",
+    "security": [],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "email",
+         "senha",
+         "nome",
+         "novo_email",
+         "nova_senha"
+        ],
+        "properties": {
+         "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150,
+          "description": "E-mail provisório"
+         },
+         "senha": {
+          "type": "string",
+          "format": "password",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Senha provisória"
+         },
+         "nome": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150
+         },
+         "novo_email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150
+         },
+         "nova_senha": {
+          "type": "string",
+          "format": "password",
+          "minLength": 8,
+          "maxLength": 128
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Perfil inicial concluído"
+     },
+     "400": {
+      "$ref": "#/components/responses/DadosInvalidos"
+     },
+     "401": {
+      "$ref": "#/components/responses/NaoAutorizado"
+     },
+     "409": {
+      "description": "O novo e-mail já está cadastrado"
+     },
+     "429": {
+      "description": "Limite compartilhado com o login de 30 tentativas por IP em 15 minutos."
+     }
+    },
+    "description": "Exige um nome, um e-mail e uma senha diferentes dos provisórios. Após concluir, faça login com as novas credenciais."
    }
   },
   "/auth/logout": {
