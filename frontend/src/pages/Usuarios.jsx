@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   listarUsuarios,
   criarUsuario,
   editarUsuario,
   alterarStatusUsuario,
-  mensagemDeErro
-} from "../services/api";
-import { getUsuarioLogado } from "../utils/perfil";
-import { NIVEIS_ACESSO, STATUS_USUARIO, rotulo, formatarData } from "../utils/rotulos";
-import Layout from "../components/Layout";
-import "../components/Tela.css";
+  mensagemDeErro,
+} from '../services/api';
+import { getUsuarioLogado } from '../utils/perfil';
+import { NIVEIS_ACESSO, STATUS_USUARIO, rotulo, formatarData } from '../utils/rotulos';
+import Layout from '../components/Layout';
+import '../components/Tela.css';
 
-const COLUNAS = { gridTemplateColumns: "1.6fr 2fr 1fr 0.8fr 1fr 1.2fr" };
-const FORM_VAZIO = { nome: "", email: "", senha: "", nivel_acesso: "colaborador" };
+const COLUNAS = { gridTemplateColumns: '1.6fr 2fr 1fr 0.8fr 1fr 1.2fr' };
+const FORM_VAZIO = { nome: '', email: '', senha: '', nivel_acesso: 'colaborador' };
 const SENHA_MINIMA = 8;
 
 function Usuarios() {
@@ -20,12 +20,12 @@ function Usuarios() {
 
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
-  const [sucesso, setSucesso] = useState("");
+  const [erro, setErro] = useState('');
+  const [sucesso, setSucesso] = useState('');
 
-  const [busca, setBusca] = useState("");
-  const [nivelFiltro, setNivelFiltro] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+  const [busca, setBusca] = useState('');
+  const [nivelFiltro, setNivelFiltro] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
 
   // null = fechado; { id: null } = novo usuário; { id: 4 } = editando
   const [formulario, setFormulario] = useState(null);
@@ -41,7 +41,7 @@ function Usuarios() {
 
     listarUsuarios()
       .then((lista) => ativo && setUsuarios(lista))
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os usuários.")))
+      .catch((e) => ativo && setErro(mensagemDeErro(e, 'Não foi possível carregar os usuários.')))
       .finally(() => ativo && setCarregando(false));
 
     return () => {
@@ -50,8 +50,8 @@ function Usuarios() {
   }, [versao]);
 
   function limparMensagens() {
-    setErro("");
-    setSucesso("");
+    setErro('');
+    setSucesso('');
   }
 
   function abrirNovo() {
@@ -65,8 +65,8 @@ function Usuarios() {
     setDados({
       nome: usuario.nome,
       email: usuario.email,
-      senha: "",
-      nivel_acesso: usuario.nivel_acesso
+      senha: '',
+      nivel_acesso: usuario.nivel_acesso,
     });
     setFormulario({ id: usuario.id_usuario });
   }
@@ -79,7 +79,7 @@ function Usuarios() {
     const corpo = {
       nome: dados.nome.trim(),
       email: dados.email.trim(),
-      nivel_acesso: dados.nivel_acesso
+      nivel_acesso: dados.nivel_acesso,
     };
 
     try {
@@ -88,19 +88,19 @@ function Usuarios() {
         if (formulario.id === meuId) delete corpo.nivel_acesso;
 
         await editarUsuario(formulario.id, corpo);
-        setSucesso("Usuário atualizado.");
+        setSucesso('Usuário atualizado.');
       } else {
         await criarUsuario({ ...corpo, senha: dados.senha });
         setSucesso(
           `Usuário criado. Informe a senha inicial para ${corpo.nome}; ` +
-          "ele pode trocá-la depois em Alterar senha."
+            'ele pode trocá-la depois em Alterar senha.',
         );
       }
 
       setFormulario(null);
       recarregar();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o usuário."));
+      setErro(mensagemDeErro(e, 'Não foi possível salvar o usuário.'));
     } finally {
       setSalvando(false);
     }
@@ -108,20 +108,20 @@ function Usuarios() {
 
   async function alternarStatus(usuario) {
     limparMensagens();
-    const novoStatus = usuario.status === "ativo" ? "inativo" : "ativo";
+    const novoStatus = usuario.status === 'ativo' ? 'inativo' : 'ativo';
 
     try {
       await alterarStatusUsuario(usuario.id_usuario, novoStatus);
       recarregar();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+      setErro(mensagemDeErro(e, 'Não foi possível alterar o status.'));
     }
   }
 
   const termo = busca.trim().toLowerCase();
   const usuariosFiltrados = usuarios.filter((u) => {
-    if (termo && !u.nome.toLowerCase().includes(termo) &&
-        !u.email.toLowerCase().includes(termo)) return false;
+    if (termo && !u.nome.toLowerCase().includes(termo) && !u.email.toLowerCase().includes(termo))
+      return false;
     if (nivelFiltro && u.nivel_acesso !== nivelFiltro) return false;
     if (statusFiltro && u.status !== statusFiltro) return false;
     return true;
@@ -168,7 +168,7 @@ function Usuarios() {
 
         {formulario && (
           <form className="tela-form" onSubmit={salvar}>
-            <h2>{formulario.id ? "Editar usuário" : "Novo usuário"}</h2>
+            <h2>{formulario.id ? 'Editar usuário' : 'Novo usuário'}</h2>
 
             <label htmlFor="usuario-nome">Nome</label>
             <input
@@ -192,9 +192,7 @@ function Usuarios() {
 
             {!formulario.id && (
               <>
-                <label htmlFor="usuario-senha">
-                  Senha inicial (mínimo {SENHA_MINIMA} caracteres)
-                </label>
+                <label htmlFor="usuario-senha">Senha inicial (mínimo {SENHA_MINIMA} caracteres)</label>
                 <input
                   id="usuario-senha"
                   type="password"
@@ -224,13 +222,9 @@ function Usuarios() {
 
             <div className="tela-form-botoes">
               <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
+                {salvando ? 'Salvando...' : 'Salvar'}
               </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
-              >
+              <button type="button" className="botao-secundario" onClick={() => setFormulario(null)}>
                 Cancelar
               </button>
             </div>
@@ -251,16 +245,16 @@ function Usuarios() {
             <div className="tela-tabela-linha" style={COLUNAS} key={u.id_usuario}>
               <span>
                 {u.nome}
-                {u.id_usuario === meuId && " (você)"}
+                {u.id_usuario === meuId && ' (você)'}
               </span>
               <span>{u.email}</span>
               <span>
-                <span className={`selo ${u.nivel_acesso === "administrador" ? "azul" : ""}`}>
+                <span className={`selo ${u.nivel_acesso === 'administrador' ? 'azul' : ''}`}>
                   {rotulo(NIVEIS_ACESSO, u.nivel_acesso)}
                 </span>
               </span>
               <span>
-                <span className={`selo ${u.status === "ativo" ? "verde" : "cinza"}`}>
+                <span className={`selo ${u.status === 'ativo' ? 'verde' : 'cinza'}`}>
                   {rotulo(STATUS_USUARIO, u.status)}
                 </span>
               </span>
@@ -271,7 +265,7 @@ function Usuarios() {
                   <>
                     <span>·</span>
                     <button onClick={() => alternarStatus(u)}>
-                      {u.status === "ativo" ? "Inativar" : "Ativar"}
+                      {u.status === 'ativo' ? 'Inativar' : 'Ativar'}
                     </button>
                   </>
                 )}

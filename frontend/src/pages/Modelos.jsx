@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   listarModelos,
   buscarModelo,
@@ -8,24 +8,24 @@ import {
   criarTarefaPadrao,
   editarTarefaPadrao,
   excluirTarefaPadrao,
-  mensagemDeErro
-} from "../services/api";
-import { DIVISOES, formatarData } from "../utils/rotulos";
-import Layout from "../components/Layout";
-import "../components/Tela.css";
-import "./Modelos.css";
+  mensagemDeErro,
+} from '../services/api';
+import { DIVISOES, formatarData } from '../utils/rotulos';
+import Layout from '../components/Layout';
+import '../components/Tela.css';
+import './Modelos.css';
 
-const COLUNAS_MODELOS = { gridTemplateColumns: "1.7fr 0.9fr 1.9fr" };
-const TAREFA_VAZIA = { titulo: "", divisao: "produto" };
+const COLUNAS_MODELOS = { gridTemplateColumns: '1.7fr 0.9fr 1.9fr' };
+const TAREFA_VAZIA = { titulo: '', divisao: 'produto' };
 
 function Modelos() {
   const [modelos, setModelos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState('');
 
   // Formulário do modelo: null = fechado; { id: null } = novo; { id: 2 } = editando
   const [formModelo, setFormModelo] = useState(null);
-  const [nomeModelo, setNomeModelo] = useState("");
+  const [nomeModelo, setNomeModelo] = useState('');
 
   // Modelo aberto, com as tarefas padrão
   const [selecionado, setSelecionado] = useState(null);
@@ -45,7 +45,7 @@ function Modelos() {
 
     listarModelos()
       .then((lista) => ativo && setModelos(lista))
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os modelos.")))
+      .catch((e) => ativo && setErro(mensagemDeErro(e, 'Não foi possível carregar os modelos.')))
       .finally(() => ativo && setCarregando(false));
 
     return () => {
@@ -54,33 +54,33 @@ function Modelos() {
   }, [versao]);
 
   async function abrirModelo(id) {
-    setErro("");
+    setErro('');
     setFormTarefa(null);
 
     try {
       setSelecionado(await buscarModelo(id));
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível abrir o modelo."));
+      setErro(mensagemDeErro(e, 'Não foi possível abrir o modelo.'));
     }
   }
 
   // ---------- Modelo ----------
 
   function novoModelo() {
-    setErro("");
-    setNomeModelo("");
+    setErro('');
+    setNomeModelo('');
     setFormModelo({ id: null });
   }
 
   function editarNomeModelo(modelo) {
-    setErro("");
+    setErro('');
     setNomeModelo(modelo.nome);
     setFormModelo({ id: modelo.id_modelo_lancamento });
   }
 
   async function salvarModelo(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
     setSalvando(true);
 
     try {
@@ -97,7 +97,7 @@ function Modelos() {
       setFormModelo(null);
       recarregarModelos();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o modelo."));
+      setErro(mensagemDeErro(e, 'Não foi possível salvar o modelo.'));
     } finally {
       setSalvando(false);
     }
@@ -106,11 +106,11 @@ function Modelos() {
   async function arquivarModelo(modelo) {
     const confirmado = window.confirm(
       `Arquivar o modelo "${modelo.nome}"? Ele deixa de aparecer na criação de ` +
-      "projetos. Os projetos já criados com ele não são alterados."
+        'projetos. Os projetos já criados com ele não são alterados.',
     );
     if (!confirmado) return;
 
-    setErro("");
+    setErro('');
 
     try {
       await excluirModelo(modelo.id_modelo_lancamento);
@@ -119,27 +119,27 @@ function Modelos() {
       }
       recarregarModelos();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível arquivar o modelo."));
+      setErro(mensagemDeErro(e, 'Não foi possível arquivar o modelo.'));
     }
   }
 
   // ---------- Tarefas padrão ----------
 
-  function novaTarefa(divisao = "produto") {
-    setErro("");
+  function novaTarefa(divisao = 'produto') {
+    setErro('');
     setTarefa({ ...TAREFA_VAZIA, divisao });
     setFormTarefa({ id: null });
   }
 
   function editarTarefa(t) {
-    setErro("");
+    setErro('');
     setTarefa({ titulo: t.titulo, divisao: t.divisao });
     setFormTarefa({ id: t.id_tarefa_padrao });
   }
 
   async function salvarTarefa(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
     setSalvando(true);
 
     const modeloId = selecionado.id_modelo_lancamento;
@@ -155,7 +155,7 @@ function Modelos() {
       setFormTarefa(null);
       await abrirModelo(modeloId);
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar a tarefa padrão."));
+      setErro(mensagemDeErro(e, 'Não foi possível salvar a tarefa padrão.'));
     } finally {
       setSalvando(false);
     }
@@ -164,13 +164,13 @@ function Modelos() {
   async function removerTarefa(t) {
     if (!window.confirm(`Remover a tarefa padrão "${t.titulo}"?`)) return;
 
-    setErro("");
+    setErro('');
 
     try {
       await excluirTarefaPadrao(selecionado.id_modelo_lancamento, t.id_tarefa_padrao);
       await abrirModelo(selecionado.id_modelo_lancamento);
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível remover a tarefa padrão."));
+      setErro(mensagemDeErro(e, 'Não foi possível remover a tarefa padrão.'));
     }
   }
 
@@ -192,7 +192,7 @@ function Modelos() {
 
         {formModelo && (
           <form className="tela-form" onSubmit={salvarModelo}>
-            <h2>{formModelo.id ? "Renomear modelo" : "Novo modelo"}</h2>
+            <h2>{formModelo.id ? 'Renomear modelo' : 'Novo modelo'}</h2>
 
             <label htmlFor="modelo-nome">Nome do modelo</label>
             <input
@@ -207,13 +207,9 @@ function Modelos() {
 
             <div className="tela-form-botoes">
               <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
+                {salvando ? 'Salvando...' : 'Salvar'}
               </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormModelo(null)}
-              >
+              <button type="button" className="botao-secundario" onClick={() => setFormModelo(null)}>
                 Cancelar
               </button>
             </div>
@@ -233,17 +229,15 @@ function Modelos() {
                 key={m.id_modelo_lancamento}
                 className={
                   selecionado?.id_modelo_lancamento === m.id_modelo_lancamento
-                    ? "tela-tabela-linha selecionada"
-                    : "tela-tabela-linha"
+                    ? 'tela-tabela-linha selecionada'
+                    : 'tela-tabela-linha'
                 }
                 style={COLUNAS_MODELOS}
               >
                 <span>{m.nome}</span>
                 <span>{formatarData(m.criado_em)}</span>
                 <span className="acoes">
-                  <button onClick={() => abrirModelo(m.id_modelo_lancamento)}>
-                    Tarefas
-                  </button>
+                  <button onClick={() => abrirModelo(m.id_modelo_lancamento)}>Tarefas</button>
                   <span>·</span>
                   <button onClick={() => editarNomeModelo(m)}>Renomear</button>
                   <span>·</span>
@@ -257,9 +251,7 @@ function Modelos() {
             {carregando && <p className="tela-vazio">Carregando...</p>}
 
             {!carregando && modelos.length === 0 && (
-              <p className="tela-vazio">
-                Nenhum modelo cadastrado. Crie um para poder criar projetos.
-              </p>
+              <p className="tela-vazio">Nenhum modelo cadastrado. Crie um para poder criar projetos.</p>
             )}
           </div>
 
@@ -307,13 +299,9 @@ function Modelos() {
 
                     <div className="tela-form-botoes">
                       <button type="submit" className="botao-primario" disabled={salvando}>
-                        {formTarefa.id ? "Salvar" : "Adicionar"}
+                        {formTarefa.id ? 'Salvar' : 'Adicionar'}
                       </button>
-                      <button
-                        type="button"
-                        className="botao-secundario"
-                        onClick={() => setFormTarefa(null)}
-                      >
+                      <button type="button" className="botao-secundario" onClick={() => setFormTarefa(null)}>
                         Cancelar
                       </button>
                     </div>

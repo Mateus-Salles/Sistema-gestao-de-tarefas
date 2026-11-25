@@ -1,5 +1,5 @@
-import { Navigate } from "react-router-dom";
-import { getUsuarioLogado, ehAdministrador } from "../utils/perfil";
+import { Navigate } from 'react-router-dom';
+import { getUsuarioLogado, ehAdministrador } from '../utils/perfil';
 
 // Só deixa entrar quem está logado.
 // Com somenteAdmin, colaboradores são mandados de volta para o dashboard.

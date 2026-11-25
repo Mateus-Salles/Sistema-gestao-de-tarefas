@@ -1,29 +1,29 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { login, mensagemDeErro } from "../services/api";
-import { salvarSessao } from "../services/sessao";
-import "./Login.css";
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { login, mensagemDeErro } from '../services/api';
+import { salvarSessao } from '../services/sessao';
+import './Login.css';
 
 function Login() {
   const navigate = useNavigate();
   // Aviso vindo de outra tela (ex.: depois de trocar a senha).
   const aviso = useLocation().state?.aviso;
 
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState('');
 
   async function entrar(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
 
     try {
       const sessao = await login(email, senha);
 
       salvarSessao(sessao);
-      navigate("/dashboard", { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (erro) {
-      setErro(mensagemDeErro(erro, "Não foi possível entrar."));
+      setErro(mensagemDeErro(erro, 'Não foi possível entrar.'));
     }
   }
 
@@ -42,10 +42,7 @@ function Login() {
             Gerencie suas tarefas.
           </h1>
 
-          <p>
-            Centralize as atividades da equipe e acompanhe o andamento dos
-            projetos em um só lugar.
-          </p>
+          <p>Centralize as atividades da equipe e acompanhe o andamento dos projetos em um só lugar.</p>
         </div>
 
         <div className="login-footer">
@@ -91,9 +88,7 @@ function Login() {
 
             <button type="submit">Entrar</button>
 
-            <p className="login-ajuda">
-              Não tem acesso ou esqueceu a senha? Fale com um administrador.
-            </p>
+            <p className="login-ajuda">Não tem acesso ou esqueceu a senha? Fale com um administrador.</p>
           </form>
         </div>
       </section>

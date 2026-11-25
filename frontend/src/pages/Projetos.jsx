@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   listarProjetos,
   listarClientes,
@@ -8,22 +8,22 @@ import {
   criarProjeto,
   editarProjeto,
   alterarStatusProjeto,
-  mensagemDeErro
-} from "../services/api";
-import { getUsuarioLogado, ehAdministrador } from "../utils/perfil";
-import { STATUS_PROJETO, rotulo, formatarData } from "../utils/rotulos";
-import Layout from "../components/Layout";
-import "../components/Tela.css";
+  mensagemDeErro,
+} from '../services/api';
+import { getUsuarioLogado, ehAdministrador } from '../utils/perfil';
+import { STATUS_PROJETO, rotulo, formatarData } from '../utils/rotulos';
+import Layout from '../components/Layout';
+import '../components/Tela.css';
 
 const FORM_VAZIO = {
-  nome: "",
-  cliente_id: "",
-  modelo_lancamento_id: "",
-  data_comeco: "",
-  data_final: ""
+  nome: '',
+  cliente_id: '',
+  modelo_lancamento_id: '',
+  data_comeco: '',
+  data_final: '',
 };
 
-const COR_STATUS = { andamento: "azul", concluido: "verde", cancelado: "cinza" };
+const COR_STATUS = { andamento: 'azul', concluido: 'verde', cancelado: 'cinza' };
 
 // Busca projetos, clientes, modelos (só o administrador tem acesso a eles)
 // e o progresso de cada projeto.
@@ -31,11 +31,11 @@ async function buscarDados(admin) {
   const [projetos, clientes, modelos] = await Promise.all([
     listarProjetos(),
     listarClientes(),
-    admin ? listarModelos() : Promise.resolve([])
+    admin ? listarModelos() : Promise.resolve([]),
   ]);
 
   const progressos = await Promise.all(
-    projetos.map((p) => buscarProgressoProjeto(p.id_projeto).catch(() => null))
+    projetos.map((p) => buscarProgressoProjeto(p.id_projeto).catch(() => null)),
   );
 
   const progresso = {};
@@ -51,9 +51,7 @@ function Projetos() {
   const admin = ehAdministrador(getUsuarioLogado());
 
   const colunas = {
-    gridTemplateColumns: admin
-      ? "1.5fr 1.2fr 1.3fr 1.6fr 1.1fr 1fr 2.1fr"
-      : "1.8fr 1.4fr 1.4fr 1.4fr 1fr"
+    gridTemplateColumns: admin ? '1.5fr 1.2fr 1.3fr 1.6fr 1.1fr 1fr 2.1fr' : '1.8fr 1.4fr 1.4fr 1.4fr 1fr',
   };
 
   const [projetos, setProjetos] = useState([]);
@@ -61,10 +59,10 @@ function Projetos() {
   const [modelos, setModelos] = useState([]);
   const [progresso, setProgresso] = useState({});
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState('');
 
-  const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
 
   // null = fechado; { id: null } = novo projeto; { id: 3 } = editando
   const [formulario, setFormulario] = useState(null);
@@ -86,7 +84,7 @@ function Projetos() {
         setModelos(r.modelos);
         setProgresso(r.progresso);
       })
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os projetos.")))
+      .catch((e) => ativo && setErro(mensagemDeErro(e, 'Não foi possível carregar os projetos.')))
       .finally(() => ativo && setCarregando(false));
 
     return () => {
@@ -94,10 +92,8 @@ function Projetos() {
     };
   }, [admin, versao]);
 
-  const nomeCliente = (id) =>
-    clientes.find((c) => c.id_cliente === id)?.nome || "-";
-  const nomeModelo = (id) =>
-    modelos.find((m) => m.id_modelo_lancamento === id)?.nome || "-";
+  const nomeCliente = (id) => clientes.find((c) => c.id_cliente === id)?.nome || '-';
+  const nomeModelo = (id) => modelos.find((m) => m.id_modelo_lancamento === id)?.nome || '-';
 
   function abrirNovo() {
     setDados(FORM_VAZIO);
@@ -109,17 +105,17 @@ function Projetos() {
       ...FORM_VAZIO,
       nome: projeto.nome,
       data_comeco: projeto.data_comeco,
-      data_final: projeto.data_final
+      data_final: projeto.data_final,
     });
     setFormulario({ id: projeto.id_projeto });
   }
 
   async function salvar(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
 
     if (dados.data_final < dados.data_comeco) {
-      setErro("A data final deve ser igual ou posterior à data de começo.");
+      setErro('A data final deve ser igual ou posterior à data de começo.');
       return;
     }
 
@@ -130,7 +126,7 @@ function Projetos() {
         await editarProjeto(formulario.id, {
           nome: dados.nome.trim(),
           data_comeco: dados.data_comeco,
-          data_final: dados.data_final
+          data_final: dados.data_final,
         });
       } else {
         await criarProjeto({
@@ -138,28 +134,28 @@ function Projetos() {
           cliente_id: Number(dados.cliente_id),
           modelo_lancamento_id: Number(dados.modelo_lancamento_id),
           data_comeco: dados.data_comeco,
-          data_final: dados.data_final
+          data_final: dados.data_final,
         });
       }
 
       setFormulario(null);
       recarregar();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o projeto."));
+      setErro(mensagemDeErro(e, 'Não foi possível salvar o projeto.'));
     } finally {
       setSalvando(false);
     }
   }
 
   async function mudarStatus(projeto, status) {
-    setErro("");
+    setErro('');
 
     try {
       await alterarStatusProjeto(projeto.id_projeto, status);
       recarregar();
     } catch (e) {
       // Ex.: concluir com tarefas pendentes é bloqueado pelo banco.
-      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+      setErro(mensagemDeErro(e, 'Não foi possível alterar o status.'));
     }
   }
 
@@ -175,8 +171,8 @@ function Projetos() {
     return correspondeBusca && correspondeStatus;
   });
 
-  const clientesAtivos = clientes.filter((c) => c.status === "ativa");
-  const modelosAtivos = modelos.filter((m) => m.status === "ativo");
+  const clientesAtivos = clientes.filter((c) => c.status === 'ativa');
+  const modelosAtivos = modelos.filter((m) => m.status === 'ativo');
 
   return (
     <Layout titulo="Projetos" subtitulo="Lançamentos da agência e seu andamento.">
@@ -189,10 +185,7 @@ function Projetos() {
             onChange={(e) => setBusca(e.target.value)}
           />
 
-          <select
-            value={statusFiltro}
-            onChange={(e) => setStatusFiltro(e.target.value)}
-          >
+          <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
             <option value="">Status: Todos</option>
             {STATUS_PROJETO.map((s) => (
               <option key={s.valor} value={s.valor}>
@@ -212,7 +205,7 @@ function Projetos() {
 
         {admin && formulario && (
           <form className="tela-form" onSubmit={salvar}>
-            <h2>{formulario.id ? "Editar projeto" : "Novo projeto"}</h2>
+            <h2>{formulario.id ? 'Editar projeto' : 'Novo projeto'}</h2>
 
             <label htmlFor="projeto-nome">Nome do projeto</label>
             <input
@@ -245,9 +238,7 @@ function Projetos() {
                 <select
                   id="projeto-modelo"
                   value={dados.modelo_lancamento_id}
-                  onChange={(e) =>
-                    setDados({ ...dados, modelo_lancamento_id: e.target.value })
-                  }
+                  onChange={(e) => setDados({ ...dados, modelo_lancamento_id: e.target.value })}
                   required
                 >
                   <option value="">Selecione o modelo</option>
@@ -297,13 +288,9 @@ function Projetos() {
 
             <div className="tela-form-botoes">
               <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
+                {salvando ? 'Salvando...' : 'Salvar'}
               </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
-              >
+              <button type="button" className="botao-secundario" onClick={() => setFormulario(null)}>
                 Cancelar
               </button>
             </div>
@@ -333,50 +320,42 @@ function Projetos() {
                 <span>
                   {formatarData(projeto.data_comeco)} a {formatarData(projeto.data_final)}
                 </span>
-                <span className="barra-progresso" title={
-                  p ? `${p.tarefas_concluidas} de ${p.total_tarefas} tarefas concluídas` : ""
-                }>
+                <span
+                  className="barra-progresso"
+                  title={p ? `${p.tarefas_concluidas} de ${p.total_tarefas} tarefas concluídas` : ''}
+                >
                   <span className="barra-progresso-trilho">
                     <span
                       className="barra-progresso-preenchida"
-                      style={{ width: `${percentual}%`, display: "block" }}
+                      style={{ width: `${percentual}%`, display: 'block' }}
                     />
                   </span>
                   <span className="barra-progresso-texto">{percentual}%</span>
                 </span>
                 <span>
-                  <span className={`selo ${COR_STATUS[projeto.status] || ""}`}>
+                  <span className={`selo ${COR_STATUS[projeto.status] || ''}`}>
                     {rotulo(STATUS_PROJETO, projeto.status)}
                   </span>
                 </span>
 
                 {admin && (
                   <span className="acoes">
-                    <button onClick={() => navigate(`/tarefas?projeto=${projeto.id_projeto}`)}>
-                      Kanban
-                    </button>
+                    <button onClick={() => navigate(`/tarefas?projeto=${projeto.id_projeto}`)}>Kanban</button>
                     <span>·</span>
                     <button onClick={() => abrirEdicao(projeto)}>Editar</button>
-                    {projeto.status === "andamento" ? (
+                    {projeto.status === 'andamento' ? (
                       <>
                         <span>·</span>
-                        <button onClick={() => mudarStatus(projeto, "concluido")}>
-                          Concluir
-                        </button>
+                        <button onClick={() => mudarStatus(projeto, 'concluido')}>Concluir</button>
                         <span>·</span>
-                        <button
-                          className="perigo"
-                          onClick={() => mudarStatus(projeto, "cancelado")}
-                        >
+                        <button className="perigo" onClick={() => mudarStatus(projeto, 'cancelado')}>
                           Cancelar
                         </button>
                       </>
                     ) : (
                       <>
                         <span>·</span>
-                        <button onClick={() => mudarStatus(projeto, "andamento")}>
-                          Reabrir
-                        </button>
+                        <button onClick={() => mudarStatus(projeto, 'andamento')}>Reabrir</button>
                       </>
                     )}
                   </span>

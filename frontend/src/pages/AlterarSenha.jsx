@@ -1,31 +1,31 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { alterarSenha, mensagemDeErro } from "../services/api";
-import { limparSessao } from "../services/sessao";
-import Layout from "../components/Layout";
-import "../components/Tela.css";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { alterarSenha, mensagemDeErro } from '../services/api';
+import { limparSessao } from '../services/sessao';
+import Layout from '../components/Layout';
+import '../components/Tela.css';
 
 const SENHA_MINIMA = 8;
 
 function AlterarSenha() {
   const navigate = useNavigate();
 
-  const [senhaAtual, setSenhaAtual] = useState("");
-  const [senhaNova, setSenhaNova] = useState("");
-  const [confirmacao, setConfirmacao] = useState("");
-  const [erro, setErro] = useState("");
+  const [senhaAtual, setSenhaAtual] = useState('');
+  const [senhaNova, setSenhaNova] = useState('');
+  const [confirmacao, setConfirmacao] = useState('');
+  const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
 
   async function salvar(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
 
     if (senhaNova !== confirmacao) {
-      setErro("A confirmação não confere com a nova senha.");
+      setErro('A confirmação não confere com a nova senha.');
       return;
     }
     if (senhaNova === senhaAtual) {
-      setErro("A nova senha deve ser diferente da atual.");
+      setErro('A nova senha deve ser diferente da atual.');
       return;
     }
 
@@ -36,12 +36,12 @@ function AlterarSenha() {
 
       // A API invalida o token atual quando a senha muda: é preciso entrar de novo.
       limparSessao();
-      navigate("/", {
+      navigate('/', {
         replace: true,
-        state: { aviso: "Senha alterada. Entre novamente com a nova senha." }
+        state: { aviso: 'Senha alterada. Entre novamente com a nova senha.' },
       });
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível alterar a senha."));
+      setErro(mensagemDeErro(e, 'Não foi possível alterar a senha.'));
       setSalvando(false);
     }
   }
@@ -49,7 +49,11 @@ function AlterarSenha() {
   return (
     <Layout titulo="Alterar senha" subtitulo="Troque a senha da sua conta.">
       <div className="tela-conteudo">
-        {erro && <p className="tela-erro" style={{ maxWidth: 520 }}>{erro}</p>}
+        {erro && (
+          <p className="tela-erro" style={{ maxWidth: 520 }}>
+            {erro}
+          </p>
+        )}
 
         <form className="tela-form" onSubmit={salvar}>
           <label htmlFor="senha-atual">Senha atual</label>
@@ -93,7 +97,7 @@ function AlterarSenha() {
 
           <div className="tela-form-botoes">
             <button type="submit" className="botao-primario" disabled={salvando}>
-              {salvando ? "Salvando..." : "Alterar senha"}
+              {salvando ? 'Salvando...' : 'Alterar senha'}
             </button>
           </div>
         </form>

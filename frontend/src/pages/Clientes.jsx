@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   listarClientes,
   listarProjetos,
   criarCliente,
   editarCliente,
   alterarStatusCliente,
-  mensagemDeErro
-} from "../services/api";
-import { STATUS_CLIENTE, rotulo } from "../utils/rotulos";
-import Layout from "../components/Layout";
-import "../components/Tela.css";
+  mensagemDeErro,
+} from '../services/api';
+import { STATUS_CLIENTE, rotulo } from '../utils/rotulos';
+import Layout from '../components/Layout';
+import '../components/Tela.css';
 
-const COLUNAS = { gridTemplateColumns: "2fr 2fr 0.8fr 0.8fr 1.2fr" };
-const FORM_VAZIO = { nome: "", contato: "" };
+const COLUNAS = { gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr' };
+const FORM_VAZIO = { nome: '', contato: '' };
 
 // Busca os clientes e conta quantos projetos cada um tem.
 async function buscarDados() {
@@ -30,10 +30,10 @@ function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [projetosPorCliente, setProjetosPorCliente] = useState({});
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState('');
 
-  const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
 
   // null = formulário fechado; { id: null } = novo; { id: 5 } = editando
   const [formulario, setFormulario] = useState(null);
@@ -53,7 +53,7 @@ function Clientes() {
         setClientes(r.clientes);
         setProjetosPorCliente(r.projetosPorCliente);
       })
-      .catch((e) => ativo && setErro(mensagemDeErro(e, "Não foi possível carregar os clientes.")))
+      .catch((e) => ativo && setErro(mensagemDeErro(e, 'Não foi possível carregar os clientes.')))
       .finally(() => ativo && setCarregando(false));
 
     return () => {
@@ -73,7 +73,7 @@ function Clientes() {
 
   async function salvar(e) {
     e.preventDefault();
-    setErro("");
+    setErro('');
     setSalvando(true);
 
     const corpo = { nome: dados.nome.trim(), contato: dados.contato.trim() };
@@ -88,21 +88,21 @@ function Clientes() {
       setFormulario(null);
       recarregar();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível salvar o cliente."));
+      setErro(mensagemDeErro(e, 'Não foi possível salvar o cliente.'));
     } finally {
       setSalvando(false);
     }
   }
 
   async function alternarStatus(cliente) {
-    setErro("");
-    const novoStatus = cliente.status === "ativa" ? "inativa" : "ativa";
+    setErro('');
+    const novoStatus = cliente.status === 'ativa' ? 'inativa' : 'ativa';
 
     try {
       await alterarStatusCliente(cliente.id_cliente, novoStatus);
       recarregar();
     } catch (e) {
-      setErro(mensagemDeErro(e, "Não foi possível alterar o status."));
+      setErro(mensagemDeErro(e, 'Não foi possível alterar o status.'));
     }
   }
 
@@ -111,7 +111,7 @@ function Clientes() {
     const correspondeBusca =
       !termo ||
       cliente.nome.toLowerCase().includes(termo) ||
-      (cliente.contato || "").toLowerCase().includes(termo);
+      (cliente.contato || '').toLowerCase().includes(termo);
 
     const correspondeStatus = !statusFiltro || cliente.status === statusFiltro;
 
@@ -129,10 +129,7 @@ function Clientes() {
             onChange={(e) => setBusca(e.target.value)}
           />
 
-          <select
-            value={statusFiltro}
-            onChange={(e) => setStatusFiltro(e.target.value)}
-          >
+          <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
             <option value="">Status: Todos</option>
             {STATUS_CLIENTE.map((s) => (
               <option key={s.valor} value={s.valor}>
@@ -150,7 +147,7 @@ function Clientes() {
 
         {formulario && (
           <form className="tela-form" onSubmit={salvar}>
-            <h2>{formulario.id ? "Editar cliente" : "Novo cliente"}</h2>
+            <h2>{formulario.id ? 'Editar cliente' : 'Novo cliente'}</h2>
 
             <label htmlFor="cliente-nome">Nome</label>
             <input
@@ -174,13 +171,9 @@ function Clientes() {
 
             <div className="tela-form-botoes">
               <button type="submit" className="botao-primario" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar"}
+                {salvando ? 'Salvando...' : 'Salvar'}
               </button>
-              <button
-                type="button"
-                className="botao-secundario"
-                onClick={() => setFormulario(null)}
-              >
+              <button type="button" className="botao-secundario" onClick={() => setFormulario(null)}>
                 Cancelar
               </button>
             </div>
@@ -202,7 +195,7 @@ function Clientes() {
               <span>{cliente.contato}</span>
               <span>{projetosPorCliente[cliente.id_cliente] || 0}</span>
               <span>
-                <span className={`selo ${cliente.status === "ativa" ? "verde" : "cinza"}`}>
+                <span className={`selo ${cliente.status === 'ativa' ? 'verde' : 'cinza'}`}>
                   {rotulo(STATUS_CLIENTE, cliente.status)}
                 </span>
               </span>
@@ -210,7 +203,7 @@ function Clientes() {
                 <button onClick={() => abrirEdicao(cliente)}>Editar</button>
                 <span>·</span>
                 <button onClick={() => alternarStatus(cliente)}>
-                  {cliente.status === "ativa" ? "Inativar" : "Ativar"}
+                  {cliente.status === 'ativa' ? 'Inativar' : 'Ativar'}
                 </button>
               </span>
             </div>

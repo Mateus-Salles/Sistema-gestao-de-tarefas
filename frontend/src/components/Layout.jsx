@@ -1,20 +1,16 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  getUsuarioLogado,
-  ehAdministrador,
-  nomeDoNivel
-} from "../utils/perfil";
-import { logout } from "../services/api";
-import "./Layout.css";
+import { NavLink, useNavigate } from 'react-router-dom';
+import { getUsuarioLogado, ehAdministrador, nomeDoNivel } from '../utils/perfil';
+import { logout } from '../services/api';
+import './Layout.css';
 
 const ITENS_MENU = [
-  { caminho: "/dashboard", rotulo: "Dashboard" },
-  { caminho: "/tarefas", rotulo: "Kanban" },
-  { caminho: "/projetos", rotulo: "Projetos" },
-  { caminho: "/clientes", rotulo: "Clientes", somenteAdmin: true },
-  { caminho: "/modelos", rotulo: "Modelos de lançamento", somenteAdmin: true },
-  { caminho: "/usuarios", rotulo: "Usuários", somenteAdmin: true },
-  { caminho: "/senha", rotulo: "Alterar senha" }
+  { caminho: '/dashboard', rotulo: 'Dashboard' },
+  { caminho: '/tarefas', rotulo: 'Kanban' },
+  { caminho: '/projetos', rotulo: 'Projetos' },
+  { caminho: '/clientes', rotulo: 'Clientes', somenteAdmin: true },
+  { caminho: '/modelos', rotulo: 'Modelos de lançamento', somenteAdmin: true },
+  { caminho: '/usuarios', rotulo: 'Usuários', somenteAdmin: true },
+  { caminho: '/senha', rotulo: 'Alterar senha' },
 ];
 
 // Estrutura comum das telas internas: menu lateral, cabeçalho e conteúdo.
@@ -23,13 +19,11 @@ function Layout({ titulo, subtitulo, children }) {
   const usuario = getUsuarioLogado();
   const admin = ehAdministrador(usuario);
 
-  const itensVisiveis = ITENS_MENU.filter(
-    (item) => !item.somenteAdmin || admin
-  );
+  const itensVisiveis = ITENS_MENU.filter((item) => !item.somenteAdmin || admin);
 
   async function sair() {
     await logout();
-    navigate("/", { replace: true });
+    navigate('/', { replace: true });
   }
 
   return (
@@ -42,9 +36,7 @@ function Layout({ titulo, subtitulo, children }) {
             <NavLink
               key={item.caminho}
               to={item.caminho}
-              className={({ isActive }) =>
-                isActive ? "layout-menu-item ativo" : "layout-menu-item"
-              }
+              className={({ isActive }) => (isActive ? 'layout-menu-item ativo' : 'layout-menu-item')}
             >
               {item.rotulo}
             </NavLink>
@@ -64,7 +56,7 @@ function Layout({ titulo, subtitulo, children }) {
           </div>
 
           <div className="layout-usuario">
-            <strong>{usuario?.nome || "Usuário"}</strong>
+            <strong>{usuario?.nome || 'Usuário'}</strong>
             <span>{nomeDoNivel(usuario)}</span>
           </div>
         </header>

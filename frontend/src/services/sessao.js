@@ -1,6 +1,6 @@
 // Guarda e lê a sessão do usuário logado (dados do usuário + token JWT).
-const CHAVE_USUARIO = "usuario";
-const CHAVE_TOKEN = "token";
+const CHAVE_USUARIO = 'usuario';
+const CHAVE_TOKEN = 'token';
 
 export function salvarSessao({ usuario, token }) {
   // Nunca guarda a senha no navegador.
@@ -19,7 +19,7 @@ export function salvarSessao({ usuario, token }) {
 
 export function getUsuarioLogado() {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE_USUARIO) || "null");
+    return JSON.parse(localStorage.getItem(CHAVE_USUARIO) || 'null');
   } catch {
     return null;
   }
