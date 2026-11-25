@@ -10,7 +10,6 @@ import {
   criarTarefa,
   editarTarefa,
   excluirTarefa,
-  atribuirResponsavel,
   moverTarefa,
   mensagemDeErro
 } from "../services/api";
@@ -108,6 +107,7 @@ function Tasks() {
   }
 
   function novaTarefa() {
+    setErro("");
     setTarefaEditando(null);
     setTitulo("");
     setDescricao("");
@@ -119,6 +119,7 @@ function Tasks() {
   }
 
   function abrirEdicao(tarefa) {
+    setErro("");
     setTarefaEditando(tarefa);
     setTitulo(tarefa.titulo);
     setDescricao(tarefa.descricao || "");
@@ -141,11 +142,11 @@ function Tasks() {
 
     try {
       if (tarefaEditando) {
-        await editarTarefa(tarefaEditando.id_tarefa, dados);
-
-        if (admin && responsavel && Number(responsavel) !== tarefaEditando.responsavel_id) {
-          await atribuirResponsavel(tarefaEditando.id_tarefa, Number(responsavel));
+        const novoResponsavel = responsavel ? Number(responsavel) : null;
+        if (admin && novoResponsavel !== tarefaEditando.responsavel_id) {
+          dados.responsavel_id = novoResponsavel;
         }
+        await editarTarefa(tarefaEditando.id_tarefa, dados);
       } else {
         await criarTarefa({
           ...dados,
@@ -261,7 +262,7 @@ function Tasks() {
         </Col>
       </Row>
 
-      {erro && <Alert variant="danger">{erro}</Alert>}
+      {erro && !mostrarModal && <Alert variant="danger">{erro}</Alert>}
 
       {faltaSelecionar ? (
         <Alert variant="secondary">
@@ -330,6 +331,7 @@ function Tasks() {
             <Modal.Title>{tarefaEditando ? "Editar tarefa" : "Nova tarefa"}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
+            {erro && <Alert variant="danger">{erro}</Alert>}
             <Form.Group className="mb-3">
               <Form.Label>Título</Form.Label>
               <Form.Control
@@ -390,6 +392,12 @@ function Tasks() {
                 <Form.Label>Responsável</Form.Label>
                 <Form.Select value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
                   <option value="">Sem responsável</option>
+                  {tarefaEditando?.responsavel_id &&
+                    !colaboradores.some((u) => u.id_usuario === tarefaEditando.responsavel_id) && (
+                      <option value={tarefaEditando.responsavel_id}>
+                        {nomeResponsavel(tarefaEditando)}
+                      </option>
+                    )}
                   {colaboradores.map((u) => (
                     <option key={u.id_usuario} value={u.id_usuario}>
                       {u.nome}

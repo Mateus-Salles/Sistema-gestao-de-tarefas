@@ -170,10 +170,6 @@ export function excluirTarefa(id) {
   return api.delete(`/tarefas/${id}`);
 }
 
-export function atribuirResponsavel(id, responsavel_id) {
-  return api.patch(`/tarefas/${id}/responsavel`, { responsavel_id });
-}
-
 export function moverTarefa(id, kanban_status) {
   return api.patch(`/tarefas/${id}/status`, { kanban_status });
 }

@@ -125,6 +125,9 @@ async function updateFields(client, id, fields) {
 async function update(id, fields, validateTask) {
   return database.transaction(async (client) => {
     validateTask(await findById(id, client, true));
+    if (fields.responsavel_id != null) {
+      await requireAssignee(client, fields.responsavel_id);
+    }
     return updateFields(client, id, fields);
   });
 }

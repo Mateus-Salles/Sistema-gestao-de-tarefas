@@ -45,6 +45,9 @@ async function update(user, id, fields) {
   return taskModel.update(id, fields, (lockedTask) => {
     const task = requireTask(lockedTask);
     requireVisibility(user, task);
+    if (!isAdmin(user) && Object.hasOwn(fields, 'responsavel_id')) {
+      throw new AppError('Atribuir ou remover o responsável exige perfil de administrador', 403);
+    }
     if (!isAdmin(user) && task.responsavel_id !== null && task.responsavel_id !== user.id) {
       throw new AppError('Somente o responsável ou um administrador pode editar uma tarefa atribuída', 403);
     }

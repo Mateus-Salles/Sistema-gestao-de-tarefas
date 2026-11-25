@@ -21,9 +21,12 @@ const createTaskSchema = editableFields.extend({
   responsavel_id: referenceId.nullable().optional(),
 });
 
-const updateTaskSchema = editableFields.partial().refine((data) => Object.keys(data).length > 0, {
-  message: 'Informe pelo menos um campo para atualizar',
-});
+const updateTaskSchema = editableFields
+  .partial()
+  .extend({ responsavel_id: referenceId.nullable().optional() })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Informe pelo menos um campo para atualizar',
+  });
 
 const assignTaskSchema = z.object({ responsavel_id: referenceId });
 const moveTaskSchema = z.object({ kanban_status: kanbanQuerySchema.shape.kanban_status.unwrap() });

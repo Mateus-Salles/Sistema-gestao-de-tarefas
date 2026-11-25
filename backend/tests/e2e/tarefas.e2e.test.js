@@ -452,7 +452,7 @@ describe('E2E · Tarefas', () => {
       esperar(await env.api.patch(path, { titulo: 'Responsável novamente' }, ctx.token.colabA), 200);
     });
 
-    it('200 · não troca responsável nem coluna por esta rota (existem rotas próprias)', async () => {
+    it('200 · administrador edita e troca o responsável no mesmo envio, mantendo a coluna', async () => {
       const t = await criarTarefa({ responsavelId: ctx.colabA.id_usuario });
 
       const editada = esperar(
@@ -464,8 +464,47 @@ describe('E2E · Tarefas', () => {
         200,
       );
 
-      assert.equal(editada.responsavel_id, ctx.colabA.id_usuario);
+      assert.equal(editada.titulo, 'X');
+      assert.equal(editada.responsavel_id, ctx.colabB.id_usuario);
       assert.equal(editada.kanban_status, 'a_fazer');
+    });
+
+    it('200 · administrador pode remover a atribuição ao editar', async () => {
+      const t = await criarTarefa({ responsavelId: ctx.colabA.id_usuario });
+      const editada = esperar(
+        await env.api.patch(`/tarefas/${t.id_tarefa}`, { responsavel_id: null }, ctx.token.admin),
+        200,
+      );
+
+      assert.equal(editada.responsavel_id, null);
+    });
+
+    it('409 · responsável inativo impede que os demais campos sejam salvos', async () => {
+      const inativo = await criarUsuario({ status: 'inativo' });
+      const t = await criarTarefa({ titulo: 'Original', responsavelId: ctx.colabA.id_usuario });
+      const path = `/tarefas/${t.id_tarefa}`;
+
+      esperar(
+        await env.api.patch(path, { titulo: 'Alterado', responsavel_id: inativo.id_usuario }, ctx.token.admin),
+        409,
+      );
+
+      const original = esperar(await env.api.get(path, ctx.token.admin), 200);
+      assert.equal(original.titulo, 'Original');
+      assert.equal(original.responsavel_id, ctx.colabA.id_usuario);
+    });
+
+    it('403 · colaborador não pode trocar nem remover a atribuição ao editar', async () => {
+      const t = await criarTarefa({ titulo: 'Original', responsavelId: ctx.colabA.id_usuario });
+      const path = `/tarefas/${t.id_tarefa}`;
+
+      for (const responsavel_id of [ctx.colabB.id_usuario, null]) {
+        esperar(await env.api.patch(path, { titulo: 'Alterado', responsavel_id }, ctx.token.colabA), 403);
+      }
+
+      const original = esperar(await env.api.get(path, ctx.token.admin), 200);
+      assert.equal(original.titulo, 'Original');
+      assert.equal(original.responsavel_id, ctx.colabA.id_usuario);
     });
 
     it('400 · divisão inválida', async () => {
