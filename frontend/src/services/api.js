@@ -43,6 +43,10 @@ export async function login(email, senha) {
   return resposta.data;
 }
 
+export function concluirPerfilInicial(dados) {
+  return api.post("/auth/perfil-inicial", dados);
+}
+
 export async function logout() {
   try {
     await api.post("/auth/logout");
